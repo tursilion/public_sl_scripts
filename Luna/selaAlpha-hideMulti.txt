@@ -1,0 +1,116 @@
+// Show/hide script by Tursi Jackson
+//
+// this script listens for commands that basically
+// cause a partial show/unshow
+// To make it work, the script will look at all prims, and anything
+// that has a description matching the command will be shown.
+// Anything that does not match the command is hidden.
+// Empty descriptions are ignored.
+// Just match the commands to what you use to draw/holster, etc.
+
+// note that this means this script does not contain the
+// actual commands, so use a hidden channel and check your prims.
+
+// the channel the commands come in on
+integer channel = 1;
+
+// we can't "detect" which state to be in on attach, so set your default here
+// select the command that should execute on rez/attach
+string showOnAttach = "one";
+
+// internal variables below
+list cmds;
+list links;
+integer listenhandle;
+
+buildDB() 
+{
+    // enumerate the links and build a list which makes for a faster
+    // hide/show than getting the descriptions at runtime
+    // also fix up the visible state of the links in case there was a glitch
+    // while the user was modifying the object.
+    // we have two lists, a strided list consisting of [cmd,prim], and
+    // a simpler list just of commands (which we print then clear)
+    integer cnt = llGetNumberOfPrims();
+    links = [];
+    
+    while (cnt > 0) {
+        list x = llGetLinkPrimitiveParams(cnt, [PRIM_DESC]);
+        string c = llList2String(x,0);
+        if (c != "") {
+            links += c;
+            links += cnt;
+            if (-1 == llListFindList(cmds, (list)c)) {
+                cmds += c;
+            }
+            if (c == showOnAttach) {
+                llSetLinkAlpha(cnt, 1.0, ALL_SIDES);
+            } else {
+                llSetLinkAlpha(cnt, 0.0, ALL_SIDES);
+            }
+        } else {
+            // this makes sure all blank descriptions get a 1.0 alpha - enable if needed
+            //llSetLinkAlpha(cnt, 1.0, ALL_SIDES);
+        }
+        
+        --cnt;
+    }
+    
+    llOwnerSay("Ready Ch " + (string)channel + " - " + (string)(llGetListLength(links)/2) + " links recognized.");
+    llOwnerSay("Cmds: " + llDumpList2String(cmds, ","));
+    
+    //llOwnerSay("DB: " + llDumpList2String(links, ","));
+    
+    cmds=[];
+}
+
+setAlpha(string input)
+{
+    integer x = llGetListLength(links)-2;
+ 
+    while (x >= 0) {
+        string cmd = llList2String(links, x);
+        integer link = llList2Integer(links, x+1);
+
+        //llOwnerSay("cmd: " + cmd + " - link " + (string)link + " - input " + input);
+
+        if (cmd == input) {
+            llSetLinkAlpha(link, 1.0, ALL_SIDES);
+        } else {
+            llSetLinkAlpha(link, 0.0, ALL_SIDES);
+        }
+        x=x-2;
+    }
+}
+
+default
+{
+    state_entry()
+    {
+        listenhandle = llListen(channel, "", NULL_KEY, "");
+        buildDB();
+    }
+    
+    on_rez(integer x)
+    {
+        // just reset on a rez event - this will fix up anything caused by building
+        // and rebuild the database
+        llResetScript();
+    }
+    
+    attach(key id)
+    {
+        // just reset on an attach event - this will fix up anything caused by building
+        // and rebuild the database
+        llResetScript();
+    }
+    
+    listen(integer ch, string name, key id, string msg) 
+    {
+        //llOwnerSay("Heard '" + msg + "' on ch " + (string)ch + " from " + (string)id + " owner " + (string)llGetOwnerKey(id) + " my owner " + (string)llGetOwner());
+        if (llGetOwnerKey(id) == llGetOwner()) {
+            setAlpha(msg);
+        }
+    }
+
+}

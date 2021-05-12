@@ -1,0 +1,131 @@
+vector original=<0,35,272>; rotation quatorig;
+vector rotleft=<0,35,230>; rotation quatleft;
+vector rotright=<0,35,290>; rotation quatright;
+vector scale_rotleft=<0,35,230>; rotation scale_quatleft;
+vector scale_rotright=<0,35,290>; rotation scale_quatright;
+vector scale_original=<0,35,272>; rotation scale_quatorig;
+float time = .5;
+float tail_delay = 1.0;
+float tail_strength = 1.0;
+float scale;
+float leftpos=230;
+float origpos=272;
+float rightpos=290;
+integer tail_height=35;
+string help_msg = "Tail commands on channel 42:\n  tail up\n  tail down\n  tail wag on\n  tail wag off\n  tail twitch on\n  tail high\n  tail low\n   tail reset\n   tail help";
+
+Swish()
+{
+    //llSetRot(quatleft);
+    llSetRot(scale_quatleft);
+    llSleep(.5);
+    
+    //llSetRot(quatright);
+    llSetRot(scale_quatright);
+    llSleep(.5);
+}
+
+   
+OriginalPos() 
+{
+    llSetRot(scale_quatorig);
+    llSleep(.5);
+}
+
+scale_movement(float scale)
+{
+    vector new_rotleft = rotleft;
+    vector new_rotright = rotright;
+    new_rotleft.z = ((leftpos-origpos)*scale) + origpos;
+    new_rotright.z = ((rightpos-origpos)*scale)+origpos;
+    scale_rotleft = new_rotleft;
+    scale_rotright = new_rotright;
+    scale_quatleft = llEuler2Rot(scale_rotleft * DEG_TO_RAD);
+    scale_quatright = llEuler2Rot(scale_rotright * DEG_TO_RAD);
+}
+
+adjust_tail_height(integer height)
+{
+    tail_height = tail_height + height;
+    scale_original.y = tail_height;
+    llOwnerSay("tail height now " + (string)tail_height);
+    scale_quatorig = llEuler2Rot(scale_original * DEG_TO_RAD);
+}
+
+default
+{
+    state_entry()
+    {
+        quatleft = llEuler2Rot(rotleft * DEG_TO_RAD);
+        quatright = llEuler2Rot(rotright * DEG_TO_RAD);
+        quatorig = llEuler2Rot(original * DEG_TO_RAD);
+        scale_quatorig = quatorig;
+        scale_movement(1.0);
+        llOwnerSay("Tail reset, listening on channel 42");
+        llOwnerSay(help_msg);
+    
+        llListen(42, "",llGetOwner(), "" );
+    }
+
+    listen(integer channel, string name, key id, string message)
+    {
+        llOwnerSay("Got message "+message);
+        if (message == "tail wag off") {
+            OriginalPos();
+            llSetTimerEvent(0);
+        } else if (message == "tail wag on") {
+            scale_movement(1.0);
+            llSetTimerEvent(time);
+        } else if (message == "tail twitch on" || message == "tail twitch") {
+            scale_movement(0.5);
+            llSetTimerEvent(time);
+        } else if (message == "tail up") {
+            adjust_tail_height(10);
+            OriginalPos();
+            llSetTimerEvent(0);
+        } else if (message == "tail down") {
+            adjust_tail_height(-10);
+            OriginalPos();
+            llSetTimerEvent(0);
+        } else if (message == "tail reset") {
+            tail_height =  35;
+            adjust_tail_height(0);
+            OriginalPos();
+            llSetTimerEvent(0);
+        } else if (message == "tail high") {
+            tail_height = 95;
+            adjust_tail_height(0);
+            OriginalPos();
+            llSetTimerEvent(0);            
+        } else if (message == "tail low") {
+            tail_height = -35;
+            adjust_tail_height(0);
+            OriginalPos();
+            llSetTimerEvent(0);
+        } else if (message == "tail help") {
+            llOwnerSay(help_msg);
+        }
+    }
+       
+    timer()
+    {
+       Swish();
+       Swish();
+       OriginalPos();
+       llSetTimerEvent(time + llFrand(10));
+    }
+    
+    on_rez(integer start_param)
+    {
+        llOwnerSay("Resetting tail script...");
+        llResetScript();
+    }
+    
+    touch_start(integer num_detected) {
+        integer i;
+        for (i=0; i<num_detected; ++i) {
+            llOwnerSay(llKey2Name(llDetectedKey(i))+" touched your tail.");
+//            llWhisper(0, "Please don't touch my tail.");
+        }
+    }
+}

@@ -1,0 +1,177 @@
+// TODO: probably should hold off on the circling until the root prim
+// gets both contestents and notifies us it is taking flight
+
+
+//*****************************************
+//*     Nyterave animation ball script!   *
+//*           FREE TO USE V2.1            * 
+//*        by Sitting Lightcloud          *
+//******************************************/
+
+// * * * * * * * MODIFY BELOW * * * * * * *//
+
+
+// position to sit on the ball e.g <0.0, 0.0, 0.43>
+// sit  0.5 meter above the ball
+vector POSITION=<8.0, 0.0, -0.10>;
+vector ROTATION=<0.0, 0.0, 90.0>;
+
+vector RotateSpeed=<0.0, 0.0, 10.0>;    // 10 frames per second, this many degrees per frame
+
+vector SitPos;
+rotation SitRot;
+
+list rgb;
+string animation;
+integer ParticleLink=0;
+
+rotation getrotation(vector xyz_angles) 
+{
+    vector angles_in_radians = xyz_angles*DEG_TO_RAD; // Change to Radians
+    rotation rot_xyzq = llEuler2Rot(angles_in_radians); // Change to a Rotation
+    return rot_xyzq;
+}
+
+//Sets / Updates the sit target moving the avatar on it if necessary.
+UpdateSitTarget(vector pos, rotation rot)
+{//Using this while the object is moving may give unpredictable results.
+    llSitTarget(pos, rot);//Set the sit target
+    key user = llAvatarOnSitTarget();
+    if(user)//true if there is a user seated on the sittarget, if so update their position
+    {
+        vector size = llGetAgentSize(user);
+        if(size)//This tests to make sure the user really exists.
+        {
+            //We need to make the position and rotation local to the current prim
+            rotation localrot = ZERO_ROTATION;
+            vector localpos = ZERO_VECTOR;
+            if(llGetLinkNumber() > 1)//only need the local rot if it's not the root.
+            {
+                localrot = llGetLocalRot();
+                localpos = llGetLocalPos();
+            }
+            pos.z += 0.4;
+            integer linkNum = llGetNumberOfPrims();     // TODO: wait.. why does this work with TWO avatars??
+            do{
+                if(user == llGetLinkKey( linkNum ))//just checking to make sure the index is valid.
+                {
+                    // put the user and myself in the same place, so we can be a particle source
+                    vector tmppos = ((pos - (llRot2Up(rot) * size.z * 0.02638)) * localrot) + localpos;
+                    rotation tmprot = rot * localrot / llGetRootRotation();
+                    llSetLinkPrimitiveParamsFast(linkNum,
+                                            [PRIM_POSITION, tmppos,
+                                             PRIM_ROTATION, tmprot]);
+                    if (ParticleLink > 0) {
+                        llSetLinkPrimitiveParamsFast(ParticleLink,
+                                                [PRIM_POSITION, tmppos] );
+                    }
+                                             
+                    return;
+                }
+            }while( --linkNum );
+        }
+        else
+        {//It is rare that the sit target will bork but it does happen, this can help to fix it.
+            llUnSit(user);
+        }
+    }
+}//Written by Strife Onizuka, size adjustment provided by Escort DeFarge
+
+default 
+{
+    state_entry() 
+    {
+        SitPos = POSITION;
+        SitRot = getrotation(ROTATION);
+        UpdateSitTarget(SitPos, SitRot);
+        RotateSpeed.z+=llGetLinkNumber();
+        animation="";
+        llSetTimerEvent(0.3);   // ping for our emitter till we get it
+    }
+    
+    on_rez(integer r)
+    {
+        llResetScript();
+    }
+    
+    changed(integer change) 
+    { 
+        if (change & CHANGED_LINK) 
+        {
+            
+            if (llAvatarOnSitTarget() != NULL_KEY) 
+            { 
+                llRequestPermissions(llAvatarOnSitTarget(), PERMISSION_TRIGGER_ANIMATION);
+            }
+            else
+            {
+                if (animation != "") llMessageLinked(LINK_ROOT, -1, "sit", NULL_KEY);
+
+                integer perm=llGetPermissions();
+                if ((perm & PERMISSION_TRIGGER_ANIMATION) && llStringLength(animation)>0)       
+                llStopAnimation(animation);
+                animation="";
+                SitPos = POSITION;
+                SitRot = getrotation(ROTATION);
+                UpdateSitTarget(SitPos, SitRot);
+                llSetTimerEvent(0.0);
+            }
+        }
+    }
+    run_time_permissions(integer perm)
+    {
+        if (perm & PERMISSION_TRIGGER_ANIMATION)
+        {
+                key k = llAvatarOnSitTarget();
+                string n = llToLower( llKey2Name(k) );
+                
+                llOwnerSay("Got name " + n);
+                if ((n == "tursi jackson") || (n == "valinye resident")) {
+                    animation = "Luna Fly";
+                } else {
+                    animation = "Meru Fly";
+                }
+                llStartAnimation(animation);
+                llStopAnimation("sit");
+                llSetText("",<0,0,0>,0.0);
+                llSetTimerEvent(0.1);
+                
+                llMessageLinked(LINK_ROOT, 1, "sit", NULL_KEY);
+        }
+    }
+    
+    timer() 
+    {
+        float tmp;
+        
+        if (ParticleLink == 0) {
+            // find our related particle emitter by name - we are "sitx" it is "emitterx"
+            llMessageLinked(LINK_ALL_OTHERS, 0, "getname", NULL_KEY);
+        } else {
+            rotation rot = getrotation(RotateSpeed);
+            SitPos *= rot;
+            SitRot *= rot;
+            UpdateSitTarget(SitPos, SitRot);
+        }
+    }
+    
+    link_message(integer Sender, integer Number, string str, key Key) 
+    {
+        if (str=="name") {
+            str=llKey2Name(Key);
+            str=llToLower(str);
+            string me=llKey2Name(llGetKey());
+            me=llToLower(me);
+            if ((me=="sit2") && (str=="emitter2")) {
+                llOwnerSay("Got emitter2 as link " + (string)Sender);
+                ParticleLink=Sender;
+                llSetTimerEvent(0.0);
+            }
+            if ((me=="sit1") && (str=="emitter1")) {
+                llOwnerSay("Got emitter1 as link " + (string)Sender);
+                ParticleLink=Sender;
+                llSetTimerEvent(0.0);
+            }
+        }
+    }
+}

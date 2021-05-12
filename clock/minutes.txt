@@ -1,0 +1,98 @@
+// Clock Script by Tursi Jackson, feel free to borrow but please attribute!
+// Nothing in this script normally needs to be editted
+// (Unless you want to hard-code the offset - good idea if you change it often) 
+// Note that the offsets and everything else are cleared on re-rez
+
+// minute offsets are less often needed (Newfies? :) )
+integer do_24_hr_mode = 0;      // set to 1 if you want a 24-hr dial instead of 12-hr
+integer default_min_offset=0;    // change this one if you want to change the default
+
+integer H; //Hours
+integer M; //Minutes
+float pos;
+rotation rot;
+integer min_offset;     // how many mins from Linden time are we offset? (Resets on rez)
+
+// there are 60 mins in an hour,
+// so there are 60 positions for the minute hand 
+
+Update() {
+    integer T = (integer)llGetWallclock(); // Get time PST
+    if (!do_24_hr_mode) {
+        if (T > 43200) //If it's after noon
+        {
+            T = T - 43200; //Subtract 12 hours
+        }
+    }
+    H = T / 3600; //get hours
+    M = (T - (H * 3600)) / 60; //get minutes
+    
+    // deal with the offset
+    M+=min_offset;
+    while (M >= 60) {
+        M-=60;
+    }
+    
+    // now turn that into a rotation
+    if (do_24_hr_mode) {
+        pos=M*3.0;                          // get degrees
+    } else {
+        pos=M*6.0;                          // get degrees
+    }
+    vector rad=<0,0,(360-pos)*DEG_TO_RAD>;    // get radians
+    rot = llEuler2Rot(rad);             // get rotation
+    llSetLocalRot(rot);
+}
+        
+default
+{
+    state_entry()
+    {
+        min_offset = default_min_offset;
+        Update();
+        // report the result back to the big hand
+        llMessageLinked(LINK_ALL_OTHERS, min_offset, "newmin", NULL_KEY);
+        // updating twice a minute to reduce realtime clock lag - never
+        // more than 29 seconds behind!
+        llSetTimerEvent(30);
+    }
+    
+    timer() {
+        Update();
+    }
+    
+    on_rez(integer start) {
+        // make sure all values are at default
+        llResetScript();
+    }
+    
+    link_message(integer sender_num, integer num, string str, key id) {
+        if (str == "reset") {
+            min_offset = default_min_offset;
+            Update();
+            // report the result back to the big hand
+            llMessageLinked(LINK_ALL_OTHERS, min_offset, "newmin", NULL_KEY);
+        }
+        if (str == "min") {
+            min_offset+=num;
+            while (min_offset >= 60) {
+                min_offset-=60;
+            }
+            while (min_offset < 0) {
+                min_offset+=60;
+            }
+            Update();
+            llOwnerSay("Minute offset now " + (string)min_offset + " minutes.");
+            // report the result back to the big hand
+            llMessageLinked(LINK_ALL_OTHERS, min_offset, "newmin", NULL_KEY);
+        }
+    }
+    
+    changed(integer mask)
+    {   // Triggered when the object containing this script changes owner.
+        if(mask & CHANGED_OWNER)
+        {
+            llResetScript();
+        }
+    }    
+}

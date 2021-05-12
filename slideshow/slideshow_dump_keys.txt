@@ -1,0 +1,88 @@
+// Slideshow script by Tursi Jackson - 16 Jun 2009
+// Not for resale! Based on my haunted portrait script.
+// 
+// This is the front panel script
+
+// these are the image counters
+integer nFirst=1;
+integer nLast=53;
+
+// how long a number to pad to (with zeros - 3 means like 001)
+integer nPad=3;
+
+// use these to set the image name. Somewhere there is a number
+// these are the prefix and suffix, and may be empty string.
+string prefix_name="";
+string suffix_name="_st01";
+
+// slideshow time (can be changed by the click menu)
+float delaytime = 5.0;
+
+// how often in seconds to fade - lower number is smoother but laggier
+float fadetime = 0.1;    
+
+// how far to fade per fadetime - smaller number is smoother but slower
+// the default of fadetime=0.1 and fadestep=0.05 makes about 2 seconds
+float fadestep = 0.05;
+
+// this is the internal menu channel, so change it for each
+// release if they will be used in the same area
+integer testchannel=861;
+
+// these are internal variables, don't touch them
+key owner;
+key current_tex;
+key next_tex;
+float currentfade;
+// enable this to debug the state changes
+integer debug=0;
+
+string format_name(integer idx) {
+    string sTmp;
+    
+    sTmp = (string)idx;
+    while (llStringLength(sTmp) < nPad) {
+      sTmp="0"+sTmp;
+    }
+    
+    return prefix_name + sTmp + suffix_name;
+}
+
+default
+{
+    on_rez(integer start_param) {
+        llResetScript();
+        if (debug) {
+            llOwnerSay("rez...");
+        }
+    }
+    
+    state_entry()
+    {
+        integer idx;
+        string sName;
+        
+        if (debug) {
+            llOwnerSay("default");
+        }
+        
+        // init data, then figure out where to start
+        owner=llGetOwner();
+        
+        // startup script to get all texture IDs for a notecard
+        for (idx=nFirst; idx<=nLast; idx++) {
+            sName=format_name(idx);
+            if (INVENTORY_TEXTURE != llGetInventoryType(sName)) {
+                llSay(0, "Could not find inventory texture '" + sName + "' - please add to the content folder");
+            }
+            current_tex = llGetInventoryKey(sName);
+            if (NULL_KEY == current_tex) {
+                llSay(0, "Can't get the key for '" + sName + "' - please check it is full mod/copy/trans");
+            }
+            llOwnerSay((string)current_tex + "\n");
+        }
+    }
+    
+    
+}
+

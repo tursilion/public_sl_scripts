@@ -1,0 +1,23 @@
+// detect and report new animation keys
+
+list keys = [];
+
+default
+{
+    state_entry()
+    {
+        llSetTimerEvent(0.5);
+    }
+    
+    timer() {
+        list x = llGetAnimationList(llGetOwner());
+        integer i;
+        for (i=0; i<llGetListLength(x); ++i) {
+            key k = llList2Key(x, i);
+            if (-1 == llListFindList(keys, [k])) {
+                keys += k;
+                llOwnerSay("Found new animation: " + (string)k);
+            }
+        }
+    }
+}

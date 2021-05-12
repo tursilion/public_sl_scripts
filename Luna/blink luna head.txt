@@ -1,0 +1,60 @@
+// Tursi Jackson
+// Simple script to blink between two faces
+// For Luna!
+
+// these define the random time between blinks in seconds
+float blinkMaxTime = 60.0;
+float blinkMinTime = 5.0;
+
+// this one defines how long the eyes stay closed in a blink
+float closedTime = 0.2;
+
+// you only need to change these if the faces change - sets the
+// prims that represent the open and closed animations
+// Note that on this head, open has TWO prims and closed has one.
+// (Really surfaces, it's just how SL imports mesh)
+integer open1 = 3;
+integer open2 = 5;
+integer closed1 = 4;
+
+default
+{
+    state_entry()
+    {
+        state open;
+    }
+}
+
+state open
+{
+    state_entry()
+    {
+        llSetLinkAlpha(open1, 1.0, ALL_SIDES);
+        llSetLinkAlpha(open2, 1.0, ALL_SIDES);
+        llSetLinkAlpha(closed1, 0.0, ALL_SIDES);
+        
+        llSetTimerEvent(llFrand(blinkMaxTime-blinkMinTime)+blinkMinTime);
+    }
+    
+    timer()
+    {
+        state closed;
+    }
+}
+
+state closed
+{
+    state_entry()
+    {
+        llSetLinkAlpha(open1, 1.0, ALL_SIDES);
+        llSetLinkAlpha(open2, 1.0, ALL_SIDES);
+        llSetLinkAlpha(closed1, 0.0, ALL_SIDES);
+        
+        llSetTimerEvent(closedTime);
+    }
+    
+    timer()
+    {
+        state open;
+    }
+}

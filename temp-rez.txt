@@ -1,0 +1,51 @@
+// This is a quick hacky temp-rez script by Tursi.
+// The item you want to rez MUST be copy and mod!
+// You need to take these steps:
+// 1) Locate the position on the sim, and note the position.
+// 2) Set the "temporary" flag on the object, and take it into inventory before it derezzes
+// 3) create a new object to host the script. Copy the temp thing into the new object
+// 4) copy this script into the new object
+// 5) change the 'pos' variable to match the correct position on the sim
+// 6) You usually don't need to change rotation
+// 7) Change the "object" string to the name of the temp thing in inventory
+// 8) Place the new rezzer object within 10m of the target position of the temp thing
+// 9) click it once to start rezzing - it will auto-rez every 30 seconds and should look solid
+//
+// Some sims don't like temp rezzer scripts, so don't go overboard!
+// Also, sometimes SL will decide it's an abusive object and block it. if you get notifications
+// like that, you may have to create a new object to continue. You can copy the old script
+// over so you don't need to reposition it.
+
+// Start by testing on small objects till you figure it out! Good luck and have fun! 
+
+vector pos= <108.74820, 140.86940, 24.47728>;
+rotation rot=<0.00000, 0.00000, 0.70711, 0.70711>;
+string object="Castle Gray Lower Tmp";
+
+// just here for reference how to get the location
+whereami()
+{
+    vector where=llGetPos();
+    rotation how=llGetRot();
+    llSay(0, "Hello, Avatar! I am at " + (string)where + " - rot " + (string)how);
+}
+
+default
+{
+    state_entry()
+    {
+        llSetTimerEvent(58.0);
+    }
+
+    timer()
+    {
+        llRezAtRoot(object, pos, <0,0,0>, rot, 0);
+    }
+    
+    touch_start(integer total_number)
+    {
+        if (llDetectedKey(0) == llGetOwner()) {
+            llRezAtRoot(object, pos, <0,0,0>, rot, 0);
+        }
+    }
+}

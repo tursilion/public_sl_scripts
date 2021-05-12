@@ -1,0 +1,50 @@
+// Tursi's Luna Mane based on Celestia's mane
+// textures extracted from the original hair ;)
+// order determined visually via video capture and step-by-stepping
+
+// NOTE: texture list deliberately obfuscated cause I don't know
+// if the owner cares. :)
+list textures = [
+"47634c40_x04dc_8922_886b_d510415b3857",    // 12
+"6d364313_x0ddc_fc31_a856_f42bdbf4d845",    // 0
+"8447970b_xf710_c684_b7b8_617cfb42c377",    // 19
+"ffebbf60_x9599_b472_aa79_e0db8bb3e0d7",    // 11
+"5d9af48a_xc005_0a9e_3c3d_0a4c9fedc4a0",    // 17
+"2626249a_xd372_96b5_0498_58fb63195fde",    // 18
+"ba68888b_xf478_38e0_172d_c8439557ee8c",    // 7
+"0c8172a1_x17de_11ed_f4b3_4c37b2797fe5",    // 16
+"8cf012ff_x8672_5ebc_366e_bf699ad02596",    // 4
+"51d9cf8a_x7b45_785b_fdda_8ae49bc23d9e",    // 8
+"f6ff90ca_x2cd0_6551_1789_de5e53bba6de",    // 14
+"63c5e838_x26ba_b6c3_dcd7_0660cd82e502",    // 10
+"a8868f8b_x4b4e_390e_c6da_cbf596efb9ce",    // 6
+"d1d083f3_x350a_f001_7bc7_097087af900b",    // 13
+"fbdee00c_x2db6_786b_b221_99b897dacfbb",    // 9
+"749eeb69_xc37a_1741_b01e_cda7e018f13d",    // 5
+"e1d4e7fa_xb9d6_22c5_1c29_08aac92fe84a",    // 15
+"fbe0bb72_x4ac6_1007_ad22_2ce8600317d3",    // 3
+"d7f3bf48_x0b16_9efc_2748_2a7c71126a97"    // 1
+];
+integer index=0;
+
+default
+{
+    on_rez(integer s) {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+       llSetTimerEvent(0.1);
+    }
+    
+    timer() {
+      //  llOwnerSay((string)(index+5));
+        llSetLinkPrimitiveParamsFast(2, [PRIM_TYPE, PRIM_TYPE_SCULPT, llList2String(textures, index), PRIM_SCULPT_TYPE_CYLINDER]);
+        llSetLinkPrimitiveParamsFast(3, [PRIM_TYPE, PRIM_TYPE_SCULPT, llList2String(textures, index), PRIM_SCULPT_TYPE_CYLINDER]);
+        index=index+1;
+        if (index >= llGetListLength(textures)) {
+            index = 0;
+        }       
+    }
+}

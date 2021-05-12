@@ -1,0 +1,10 @@
+default
+{
+    state_entry()
+    {
+    vector where=llGetPos();
+    rotation how=llGetRot();
+    llSay(0, "Hello, Avatar! I am at " + (string)where + " - rot " + (string)how);
+    llRemoveInventory("whereami");
+    }
+}

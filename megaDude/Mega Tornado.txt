@@ -1,0 +1,70 @@
+// Simple mega tornado script by Tursi
+
+integer isLive = 0;
+vector force=<0.7,0,2.5>;
+vector finalforce;
+rotation rotated;
+integer i3;
+integer i4;
+
+fire() {
+    // set ourselves up and fire away
+    isLive=0;
+    llSetStatus(STATUS_PHYSICS | STATUS_BLOCK_GRAB | STATUS_DIE_AT_EDGE, TRUE);
+    llSetForce(force*rotated, FALSE);
+    llTargetOmega(<0,0,1>, 6.0, 5.0);
+    llSetTimerEvent(0.1); // set solid timer
+    llSetPrimitiveParams([PRIM_TEMP_ON_REZ, TRUE]);
+}
+
+default
+{
+    state_entry()
+    {
+        // just to make work easier, make sure we're set up
+        // with the flags disabled
+        llSetStatus(STATUS_PHYSICS | STATUS_BLOCK_GRAB | STATUS_DIE_AT_EDGE, FALSE);
+        llSetStatus(STATUS_PHANTOM, TRUE);
+        llTargetOmega(<0,0,0>, 0, 0);
+        isLive=0;
+        llListen(42, "", llGetOwner(), "megabust");
+    }
+
+    on_rez(integer start) {
+        // pass any non-zero value to llRezObject
+        // the value is the rotation of the avatar:
+        // X=0
+        // Y=0
+        // ((Z+1.0)*500)*1000 +
+        // (S+1.0)*500
+        // rotation values range from -1 to +1
+        if (start != 0) {
+            // calculate the direction to go
+            i3=start/1000;
+            i4=start%1000;
+            rotated=<0.0, 0.0, (float)(i3/500.0)-1.0,(float)(i4/500.0)-1.0>;
+            finalforce=force*rotated;
+            fire();
+        }
+    }
+    
+    timer() {
+        if (isLive) {
+            llDie();
+        } else {
+            isLive=1;
+            llSetStatus(STATUS_PHANTOM, FALSE);
+            llSetTimerEvent(2.0);   // set die timer
+        }
+    }
+    
+    listen(integer channel, string name, key id, string message) {
+        // manual launch if the owner types the listen keyword (for testing)
+        // make sure you save first!
+        if (message == "megabust") {
+            // set ourselves up and fire away
+            finalforce=force;
+            fire();
+        } 
+    }
+}

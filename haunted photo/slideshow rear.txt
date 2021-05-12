@@ -1,0 +1,42 @@
+// Haunted Portrait script by Tursi Jackson - May 2009
+// Not for resale! Original purchaser is free to tweak and copy for
+// their own use, of course!
+// 
+// The idea is, you create two versions of a portrait, painting,
+// etc. One with you in the frame, and one with the same background,
+// but you are no longer in the frame.
+//
+// This script will check your online status, and update the portrait
+// accordingly - if you are offline, your portrait shows you there,
+// but when you are online, the image shifts (smooth transition!) to
+// the one with you NOT in the frame, as if you left the painting
+// to visit the real world. Muhahahah!
+//
+// If you are the owner, of course, you can test the transitions
+// with clicks, since you can't log off and still see the result.
+// It will automatically revert to normal mode after about 30 seconds
+// of inactivity.
+//
+// This is the rear panel script
+//
+
+default
+{
+    // just gets told what to do by the main prim
+    link_message(integer sender_num, integer num, string str, key id) {
+        // key contains the texture ID for us to switch to
+        // num is 1 for solid mode and 0 for transparent mode
+        if (num == 0) {
+            // go transparent first (and solid last)
+            llSetAlpha(0.0, ALL_SIDES);
+        }
+
+        llSetTexture(id, 0);
+
+        if (num == 1) {
+            llSetAlpha(1.0, ALL_SIDES);
+        }
+    }
+}
+
+        

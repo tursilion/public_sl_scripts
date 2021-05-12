@@ -1,0 +1,231 @@
+// Sliding door movement script
+// JohnG Linden
+// Edited by Cutter Rubio to make it work with later releases of LSL
+// Updated by Tursi to respond to owner touch and automatically close
+// Then re-tweaked by Tursi for Ayami's window ;)
+
+// NOTE: these definitions should be the same as those from the lock
+// object or the door will not actually work
+
+float gTimeToStayOpen = 10.0;
+
+string gOther="Tursi Jackson";
+string gOther2="Firion Dragovar";
+
+// where we are when closed
+vector      gClosedPos; 
+rotation    gClosedRot; 
+// internal timer for opening
+float       gOpenTimer = 1.6;
+
+// displacement when open
+// this one goes up now
+vector  gOpenDelta = <0.0, 0.0, 5.0>;
+// how long it takes to slide open
+float   gOpenTime = 1.6;
+// how many steps along the way
+float   gOpenTimeStep = 0.2;
+
+key gAdmin; // automatically set to owner on reset
+
+//
+// helper functions
+//
+
+func_debug(string str)
+{
+//    llSay(0, str);
+}
+
+//
+// states begin here
+//
+
+default
+{
+    on_rez(integer arg) { llResetScript(); }
+    
+    state_entry()
+    {
+        func_debug("default state_entry");
+        // no physics until we need to open/close
+        llSetStatus(STATUS_PHYSICS, FALSE);
+        // but set proper values here anyway
+        llSetBuoyancy(1.0);
+        // save position
+        gClosedPos = llGetPos();
+        gClosedRot = llGetRot();
+        gOpenTimer = 0.0;
+        gAdmin = llGetOwner();
+        // and go to closed state
+        state door_closed;
+    }
+}
+
+state door_closed
+{
+    on_rez(integer arg) { llResetScript(); }
+    
+    state_entry()
+    {
+        func_debug("door_closed state_entry");
+        // enforce proper location
+        llSetStatus(STATUS_PHYSICS, FALSE);
+        llSetPos(gClosedPos);
+        llSetRot(gClosedRot);
+    }
+    
+    touch_start(integer total_number) {
+        integer flag=0;
+        if (llDetectedKey(0) == gAdmin) {
+            flag=1;
+            state door_opening;
+        }
+        if (llDetectedName(0) == gOther) {
+            flag=1;
+            state door_opening;
+        }
+        if (llDetectedName(0) == gOther2) {
+            flag=1;
+            state door_opening;
+        }
+        if (flag == 0) {
+            llSetAlpha(0.0, ALL_SIDES);
+            llSetTimerEvent(gTimeToStayOpen);
+        }
+    }
+    
+     moving_end()
+    {
+        func_debug("moving_end");
+        // if we get moved, remember where we are
+        func_debug("old pos: " + (string)gClosedPos);
+        gClosedPos = llGetPos();
+        gClosedRot = llGetRot();
+        func_debug("new pos: " + (string)gClosedPos);
+    }
+
+   timer()
+   {
+        // reset alpha
+        // stop timer interrupts
+        llSetTimerEvent(0.0);    
+        llSetAlpha(1.0, ALL_SIDES);
+   }
+}
+
+state door_opening
+{
+    on_rez(integer arg) { llResetScript(); }
+    
+    state_entry()
+    {
+        func_debug("door_opening state_entry");
+        // turn on physics
+        // doors should never rotate
+        llSetStatus(STATUS_ROTATE_X|STATUS_ROTATE_Y|STATUS_ROTATE_Z, FALSE);
+        // start opening process
+        llResetTime();
+        gOpenTimer = 0.0;
+        llSetTimerEvent(gOpenTimeStep);
+    }
+    
+    timer()
+    {
+        float   time = llGetTime();
+        
+        if ( time > gOpenTime + gOpenTimeStep)
+        {
+            // stop timer interrupts
+            llSetTimerEvent(0.0);
+            // door is now open
+            state door_open;
+        } else
+        {
+            // interpolate proper position
+            vector  pos = gOpenDelta * (time / gOpenTime);
+            // orient properly
+            pos *= gClosedRot;
+            // move there
+            llMoveToTarget(gClosedPos + pos, gOpenTimeStep * 1.5);
+            
+        }
+    }
+    
+    state_exit()
+    {
+    }
+}
+
+state door_open
+{
+    on_rez(integer arg) { llResetScript(); }
+    
+    state_entry()
+    {
+        func_debug("door_open state_entry");
+        // enforce proper location
+        llSetPos(gClosedPos + (gOpenDelta * gClosedRot));
+        llSetRot(gClosedRot);
+        // Close in a few seconds
+        llResetTime();
+        llSetTimerEvent(gTimeToStayOpen);        
+    }
+
+    timer() {
+        llSetTimerEvent(0.0);
+        state door_closing;
+    }
+        
+}
+
+state door_closing
+{
+    on_rez(integer arg) { llResetScript(); }
+    
+    state_entry()
+    {
+        func_debug("door_closing state_entry");
+        // turn on physics
+        // doors should never rotate
+        llSetStatus(STATUS_ROTATE_X|STATUS_ROTATE_Y|STATUS_ROTATE_Z, FALSE);
+        // start opening process
+        llResetTime();
+        gOpenTimer = 0.0;
+        llSetTimerEvent(gOpenTimeStep);
+    }
+    
+    timer()
+    {
+        float   time = llGetTime();
+        
+        if ( time > gOpenTime + gOpenTimeStep)
+        {
+            // stop timer interrupts
+            llSetTimerEvent(0.0);
+            // door is now open
+            state door_closed;
+        } else
+        {
+            // interpolate proper position
+            vector  pos = gOpenDelta * (1.0 - (time / gOpenTime));
+            // orient properly
+            pos *= gClosedRot;
+            // move there
+            llMoveToTarget(gClosedPos + pos, gOpenTimeStep * 1.5);
+            
+        }
+    }
+    
+    state_exit()
+    {
+        // HACKISH: this is also done in the state_entry() of door_closed
+        // but the moving_end() callback gets called from normal door
+        // movement hanging over into the state.  Evidently state_entry()
+        // doesn't have to finish before other callbacks happen, or else
+        // the llSetStatus() doesn't immediately stop physics-based motion
+        llSetStatus(STATUS_PHYSICS, FALSE);
+        llSetPos(gClosedPos);
+        llSetRot(gClosedRot);
+    }
+}

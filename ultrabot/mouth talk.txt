@@ -1,0 +1,57 @@
+// Ultrabot mouth flashing script
+// by Tursi, for Kale
+
+integer modeSpeak=5;    // send a speak string to the mouth
+
+vector colOff=<0.0, 0.0, 0.0>;
+vector colOn=<1.0, 1.0, 0.0>;
+float speed=0.01;      // how long between characters
+
+string str;
+integer idx;
+
+process_char() {
+    if (idx < llStringLength(str)) {
+        string x=llGetSubString(str, idx, idx);
+        if (x==" ") {
+            llSetColor(colOff, ALL_SIDES);
+        } else {
+            llSetColor(colOn, ALL_SIDES);
+        }
+        idx++;
+    } else {
+        llSetColor(colOff, ALL_SIDES);
+        str="";
+        llSetTimerEvent(0.0);
+    }
+}
+
+default
+{
+    state_entry()
+    {
+        // Disable any old timers
+        llSetTimerEvent(0.0);
+        // Set the mouth color
+        llSetColor(colOff, ALL_SIDES);
+        // clear the string
+        str="";
+    }
+    
+    // We will pulse out a string by blinking!
+    link_message(integer from, integer int, string instr, key id) {
+        if (int==modeSpeak) {    
+            str=instr;
+            idx=0;
+            llSetTimerEvent(speed);
+            llSay(0, instr);
+        }
+    }
+    
+    timer() {
+        process_char();
+        process_char();
+        process_char();
+        process_char();
+    }
+}

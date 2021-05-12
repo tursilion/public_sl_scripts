@@ -1,0 +1,70 @@
+//Selective Teleporter.
+//Based on scripts by Nick Fortune, and concepts from a free teleport script.
+//This script is FREE to all who wish to use it.  No profit is to be made from this script.
+//Please leave this heading intact.
+// heavily modified by Tursi - touch activate, time limit.
+
+// Players in Allowed_avs who touch the object activate the teleport
+// to 'target' for 'activeTime' seconds
+list Allowed_avs = ["Tursi Jackson", "FoxxFire Flytrap", "Kalemika Dougall", "Sindiesel Raine"]; //People who are allowed access
+vector target = <0, 0, -232.1>;    // destination
+vector activecolor = < 1, 1, 1>; // active color
+vector inactivecolor= < 0.4, 0.4, 0.4>; // inactive color
+integer activeTime=15;          // seconds
+string Detected;
+key lastAVkey = NULL_KEY;
+
+default {
+    state_entry() {
+        llSetColor(inactivecolor, ALL_SIDES);
+        llSetSitText("...");
+        llSitTarget(<0,0,0>, ZERO_ROTATION);
+     }
+    
+    touch_start(integer total_number)
+    {
+        integer i;
+        for(i=0; i<total_number; i++) {
+            Detected = llDetectedName(i);
+            if(llDetectedType(i) & AGENT) {
+                if(llListFindList(Allowed_avs,[Detected]) != -1) {
+                    //On the list.
+                    llSetColor(activecolor, ALL_SIDES);
+                    llWhisper(0, Detected + " IS on the list, teleport active");
+                    llSetSitText("Teleport");
+                    llSitTarget(target, ZERO_ROTATION); 
+                    llSetTimerEvent(activeTime);    
+                }
+            }
+        }
+    }
+    
+    changed(integer change)
+    {
+        if (change&CHANGED_LINK == 0)
+        {
+            return;
+        }
+        
+        key currentAVkey = llAvatarOnSitTarget();
+        
+        if (currentAVkey != NULL_KEY && lastAVkey == NULL_KEY)
+        {
+            lastAVkey = currentAVkey;        
+            if (!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION))  
+                llRequestPermissions(currentAVkey,PERMISSION_TRIGGER_ANIMATION);
+            llUnSit(currentAVkey);
+            llStopAnimation("sit");
+            //llResetScript();
+            lastAVkey = NULL_KEY;
+        }
+    }   
+     
+    timer() {
+        llSetTimerEvent(0.0);
+        llSetColor(inactivecolor, ALL_SIDES);
+        llSay(0, "Timer expired - teleport closed");
+        llSetSitText("...");
+        llSitTarget(<0,0,0>, ZERO_ROTATION);
+    }
+}

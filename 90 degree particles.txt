@@ -1,0 +1,119 @@
+//// eltee Statosky's Particle Creation Engine 1.0
+integer effectFlags=0;
+integer running=FALSE;
+integer callback;
+
+// Angular Variables
+float   radius              = 0.0;
+float   beginAngle          = 0.78;
+float   endAngle            = 0.785375;
+vector  omega               = <0.0, 0.0, 0.0>;
+
+// Color Secelection Variables
+integer colorInterpolation  = FALSE;
+vector  startColor          = <1.0, 1.0, 1.0>;
+vector  endColor            = <1.0, 1.0, 1.0>;
+float   startAlpha          = 1.0;
+float   endAlpha            = 1.0;
+integer glowEffect          = FALSE;
+
+// Size & Shape Selection Variables
+integer sizeInterpolation   = FALSE;
+vector  startSize           = <1.0, 1.0, 1.0>;
+vector  endSize             = <1.0, 1.0, 1.0>;
+integer followVelocity      = FALSE;
+string  texture             = "";
+
+// Timing & Creation Variables Variables
+float   particleLife        = 2.0;
+float   SystemLife          = 0.0;
+float   emissionRate        = 0.01;
+integer partPerEmission     = 1;
+
+// Movement & Speed Variables
+float   minSpeed            = 15.0;
+float   maxSpeed            = 15.0;
+vector  acceleration        = <0.0, 0.0, -0.2>;
+integer windEffect          = FALSE;
+integer bounceEffect        = FALSE;
+integer followSource        = FALSE;
+integer followTarget        = FALSE;
+key     target              = "";
+
+//As yet unimplemented particle system flags
+integer randomAcceleration  = FALSE;
+integer randomVelocity      = FALSE;
+integer particleTrails      = FALSE;
+
+// Pattern Selection
+//integer pattern = PSYS_SRC_PATTERN_DROP;
+//integer pattern = PSYS_SRC_PATTERN_EXPLODE;
+integer pattern = PSYS_SRC_PATTERN_ANGLE;
+//integer pattern = PSYS_SRC_PATTERN_ANGLE_CONE;
+//integer pattern = PSYS_SRC_PATTERN_ANGLE_CONE_EMPTY;
+
+setParticles()
+{
+
+// Here is where to set the current target
+// llGetKey() targets this script's container object
+// llGetOwner() targets the owner of this script
+// Feel free to insert any other valid key
+
+// The following block of if statements is used to construct the mask 
+    if (colorInterpolation) effectFlags = effectFlags|PSYS_PART_INTERP_COLOR_MASK;
+    if (sizeInterpolation)  effectFlags = effectFlags|PSYS_PART_INTERP_SCALE_MASK;
+    if (windEffect)         effectFlags = effectFlags|PSYS_PART_WIND_MASK;
+    if (bounceEffect)       effectFlags = effectFlags|PSYS_PART_BOUNCE_MASK;
+    if (followSource)       effectFlags = effectFlags|PSYS_PART_FOLLOW_SRC_MASK;
+    if (followVelocity)     effectFlags = effectFlags|PSYS_PART_FOLLOW_VELOCITY_MASK;
+    if (target!="")         effectFlags = effectFlags|PSYS_PART_TARGET_POS_MASK;
+    if (glowEffect)         effectFlags = effectFlags|PSYS_PART_EMISSIVE_MASK;
+
+//Uncomment the following selections once they've been implemented
+//    if (randomAcceleration) effectFlags = effectFlags|PSYS_PART_RANDOM_ACCEL_MASK;
+//    if (randomVelocity)     effectFlags = effectFlags|PSYS_PART_RANDOM_VEL_MASK;
+//    if (particleTrails)     effectFlags = effectFlags|PSYS_PART_TRAIL_MASK;
+    llParticleSystem([
+        PSYS_PART_FLAGS,            effectFlags,
+        PSYS_SRC_PATTERN,           pattern,
+        PSYS_PART_START_COLOR,      startColor,
+        PSYS_PART_END_COLOR,        endColor,
+        PSYS_PART_START_ALPHA,      startAlpha,
+        PSYS_PART_END_ALPHA,        endAlpha,
+        PSYS_PART_START_SCALE,      startSize,
+        PSYS_PART_END_SCALE,        endSize,    
+        PSYS_PART_MAX_AGE,          particleLife,
+        PSYS_SRC_ACCEL,             acceleration,
+        PSYS_SRC_TEXTURE,           texture,
+        PSYS_SRC_BURST_RATE,        emissionRate,
+        PSYS_SRC_ANGLE_BEGIN,       beginAngle,
+        PSYS_SRC_ANGLE_END,         endAngle,
+        PSYS_SRC_BURST_PART_COUNT,  partPerEmission,      
+        PSYS_SRC_BURST_RADIUS,      radius,
+        PSYS_SRC_BURST_SPEED_MIN,   minSpeed,
+        PSYS_SRC_BURST_SPEED_MAX,   maxSpeed, 
+        PSYS_SRC_MAX_AGE,           SystemLife,
+        PSYS_SRC_TARGET_KEY,        target,
+        PSYS_SRC_OMEGA,             omega   ]);
+}
+
+default
+{
+    state_entry()
+    {
+        running = FALSE;
+        llParticleSystem([]);
+    }
+    
+    touch_start(integer x)
+    {
+        if (running == TRUE) {
+          running = FALSE;
+          llParticleSystem([]);
+        } else {
+          running=TRUE;
+          setParticles();
+        }
+    }
+}

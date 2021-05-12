@@ -1,0 +1,65 @@
+integer HUD_CHANNEL = -841511254;       // channel for HUD communications
+string UPDATE_EYES_COMMAND = "update eyes";
+string HORN_POWER_COMMAND = "horn set power";
+string texture;
+
+// Convert a key to an integer using the first 8 hex digits (32 bits)
+integer key2integer(key k) {
+    return (integer)("0x" + llGetSubString((string)k, 0, 7));
+}
+
+integer channel() {
+    return HUD_CHANNEL ^ key2integer(llGetOwner());
+}
+
+setFocusPupil(float focus) {
+    if (focus > 0.75) {
+        // light up the night!
+        llSetPrimitiveParams([PRIM_GLOW, ALL_SIDES, 1.0 ]);
+    } else {
+        // happy Luna again :)
+        llSetPrimitiveParams([PRIM_GLOW, ALL_SIDES, 0.0 ]);
+    }
+}
+
+default {
+    on_rez (integer param) {
+        llResetScript();
+    }
+
+    state_entry() {
+        texture = llGetTexture(0);
+        llListen(channel(), "", NULL_KEY, "");
+    }
+    
+    listen(integer channel, string name, key id, string msg) {
+        if (llGetOwnerKey(id) != llGetOwner()) return;
+            
+        list parsed  = llParseString2List(msg, [";"], []);
+        string command = llList2String(parsed, 0);
+
+        if (command == HORN_POWER_COMMAND) {
+            integer power = (integer)llList2String(parsed, 1);
+            // eye glow on magic overdrive of level 4!
+            float value;
+            if (power >= 4) {
+                value=0.9;
+            } else {
+                value=0.5;
+            }
+            setFocusPupil(value);
+            return;
+        }            
+
+        if (command != UPDATE_EYES_COMMAND) return;
+        
+        integer i;
+        for (i = 1; i < llGetListLength(parsed); i+=2) {
+            string param = llList2String(parsed, i);
+            float  value = (float)llList2String(parsed, i+1);
+            if (param == "focusrange") {
+                setFocusPupil(value);
+            }
+        }
+    }
+}    

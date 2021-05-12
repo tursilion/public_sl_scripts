@@ -1,0 +1,472 @@
+// Haunted Portrait script by Tursi Jackson - May 3 2009
+// Not for resale! Original purchaser is free to tweak and copy for
+// their own use, of course!
+// 
+// The idea is, you create two versions of a portrait, painting,
+// etc. One with you in the frame, and one with the same background,
+// but you are no longer in the frame.
+//
+// This script will check your online status, and update the portrait
+// accordingly - if you are offline, your portrait shows you there,
+// but when you are online, the image shifts (smooth transition!) to
+// the one with you NOT in the frame, as if you left the painting
+// to visit the real world. Muhahahah!
+//
+// If you are the owner, of course, you can test the transitions
+// with clicks, since you can't log off and still see the result.
+// It will automatically revert to normal mode after about 60 seconds
+// of inactivity.
+//
+// This is the front panel script
+//
+
+// set this to 1 to say the online state into the chat when touched,
+// or 0 not to say anything. This must be '1' for useLastOff to work!
+integer sayOnline=1;
+
+// set this to 1 to use the 'last off' notification when someone
+// else clicks your picture, or 0 to keep that information private
+integer useLastOff=1;
+
+// set this to your UTC timezone offset in hours - muck time is -8 for Pacific
+// SHOULD handle daylight savings time, but will assume ALL places honor
+// daylight savings, so if you want a timezone that does not, you will
+// have to tweak this value when the Pacific time zone changes
+integer timezone=-8;
+ 
+// how often in seconds it should check your online presence
+// A higher value helps keep server lag down.
+float scantime = 30.0;
+
+// if you want to change the picture names from 'online' and 'offline'
+// you can change these, but it's usually easier to rename the picture
+string online_pic="online";
+string offline_pic="offline";
+
+// how often in seconds to fade - lower number is smoother but laggier
+float fadetime = 0.1;    
+
+// how far to fade per fadetime - smaller number is smoother but slower
+// the default of fadetime=0.1 and fadestep=0.05 makes about 2 seconds
+float fadestep = 0.05;
+
+// this is the internal test channel, usually you don't need to change it
+integer testchannel=861;
+
+// these are internal variables, don't touch them
+key owner;
+key online_tex;
+key offline_tex;
+float currentfade;
+integer ok;
+integer intest=0;
+// enable this to debug the state changes
+integer debug=0;
+// change the test disable delay
+float testtime=60.0;
+// lastoff variables - if you reset the script these reset too.
+// but since you SHOULD be online, that's probably okay.
+integer lastoff=0;
+
+string addstr(string work, integer val, string word) {
+    string out="";
+    
+    if (val <= 0) {
+        return out;
+    }
+    
+    if (llStringLength(work) > 0) {
+        out=", ";
+    }
+    
+    if (val == 1) {
+        return out + "1 " + word;
+    }
+    
+    return out + (string)val + " " + word + "s";
+}
+
+
+default
+{
+    on_rez(integer start_param) {
+        llResetScript();
+        if (debug) {
+            llOwnerSay("rez...");
+        }
+    }
+    
+    state_entry()
+    {
+        if (debug) {
+            llOwnerSay("default");
+        }
+        
+        // init data, then figure out where to start
+        owner=llGetOwner();
+        ok=1;
+        
+        // check that the inventory items are available to the rear script
+        // need full perms on the pictures or it will fail :/
+        if (INVENTORY_TEXTURE != llGetInventoryType(online_pic)) {
+            llSay(0, "Could not find inventory texture '" + online_pic + "' - please add to the content folder");
+            ok=0;
+        }
+        online_tex = llGetInventoryKey(online_pic);
+        if (ok) {
+            if (NULL_KEY == online_tex) {
+                llSay(0, "Can't get the key for '" + online_pic + "' - please check it is full mod/copy/trans");
+               ok=0;
+            }
+        }
+
+        if (ok) {
+            if (INVENTORY_TEXTURE != llGetInventoryType(offline_pic)) {
+                llSay(0, "Could not find inventory texture '" + offline_pic + "' - please add to the content folder");
+                ok=0;
+            }
+        }
+        offline_tex = llGetInventoryKey(offline_pic);
+        if (ok) {
+            if (NULL_KEY == offline_tex) {
+                llSay(0, "Can't get the key for '" + offline_pic + "' - please check it is full mod/copy/trans");
+                ok=0;
+            }
+        }
+        
+        if (debug!=0) {
+            llOwnerSay("DEBUG is ON. To turn it off, set 'integer debug=0' in the script");
+        }
+        
+        if (ok==1) {
+            llOwnerSay("Successful startup.");
+            // go ahead and fire it off :)
+            llRequestAgentData(owner, 1);
+        } else {
+            // listen for a reset
+            llListen(testchannel, "", owner, "");            
+        }
+    }
+    
+    dataserver(key queryid, string data)
+    {
+        if ((integer)data == FALSE) {
+            // offline
+            state offline;
+        } else {
+            state online;
+        }
+    }
+    
+    listen(integer channel, string name, key id, string message)
+    {
+        if (message=="reset") {
+            llResetScript();
+        } else if (message=="makevis") {
+            llSetAlpha(1.0, ALL_SIDES);            // make visible
+            llMessageLinked(LINK_ALL_OTHERS, 1, "", offline_tex);    // notify rear side visible too
+        }
+    }
+
+    touch_start(integer total_number)
+    {
+        if (llDetectedKey(0) == owner) {
+            llDialog(llGetOwner(), "Test Portrait Change\nPortrait did not start correctly.", ["reset", "makevis"], testchannel);
+        }
+    }
+
+    
+}
+
+state online 
+{
+    on_rez(integer start_param) {
+        llResetScript();
+        if (debug) {
+            llOwnerSay("rez...");
+        }
+    }
+    
+    state_entry()
+    {
+        if (debug) {
+            llOwnerSay("online...");
+        }
+        
+        // make sure the online image is fully active
+        // we do this by setting the textures so that
+        // the front image is online, and the rear
+        // image is offline, and by ensuring that the
+        // front image is fully opaque. We set the texture
+        // first, even though that induces a script delay,
+        // because it makes both frames the same. Then 
+        // we set our alpha, then we signal the rear panel
+        // to update itself.
+        llSetTexture(online_tex, 0);        // .2s delay
+        llSetAlpha(1.0, ALL_SIDES);            // make visible
+        llMessageLinked(LINK_ALL_OTHERS, 0, "", offline_tex);    // notify online mode
+
+        if (intest) {
+            llSetTimerEvent(testtime);
+        } else {
+            llSetTimerEvent(scantime);
+        }
+        
+        llListen(testchannel, "", owner, "");
+    }
+    
+    listen(integer channel, string name, key id, string message)
+    {
+        if (message=="offline") {
+            llOwnerSay("Test active - Going to offline mode...");
+            intest=1;
+            state go_offline;
+        } else if (message=="reset") {
+            llResetScript();
+        } else if (message=="makevis") {
+            llSetAlpha(1.0, ALL_SIDES);            // make visible
+            llMessageLinked(LINK_ALL_OTHERS, 1, "", offline_tex);    // notify rear side visible too
+        }
+    }
+    
+    timer() 
+    {
+        if (intest) {
+            // test timeout
+            llOwnerSay("Test timeout - resuming normal operation");
+            intest=0;
+            llResetScript();
+        } else {
+            // check if the owner is online 
+            llRequestAgentData(owner, 1);
+        }
+    }
+    
+    dataserver(key queryid, string data)
+    {
+        if ((integer)data == FALSE) {
+            // offline
+            state go_offline;
+        }
+    }
+    
+    touch_start(integer total_number)
+    {
+        if (llDetectedKey(0) == owner) {
+            llDialog(llGetOwner(), "Test Portrait Change\nYou are in ONLINE mode.", ["offline", "reset", "makevis"], testchannel);
+            llSetTimerEvent(testtime);
+        }
+
+        if (sayOnline) {
+            // do the public chat either way, so the owner can see what is said
+            llSay(0, llKey2Name(owner) + " is currently online...");
+        }
+    }
+
+    
+    state_exit()
+    {
+        llSetTimerEvent(0.0);
+    }
+}
+
+state offline
+{
+    on_rez(integer start_param) {
+        llResetScript();
+        if (debug) {
+            llOwnerSay("rez...");
+        }
+    }
+    
+    state_entry()
+    {
+        if (debug) {
+            llOwnerSay("offline...");
+        }
+        
+        // time is a UTC
+        lastoff=llGetUnixTime();
+
+        // same deal, other way
+        llSetTexture(offline_tex, 0);            // .2s delay
+        llSetAlpha(1.0, ALL_SIDES);            // make visible
+        llMessageLinked(LINK_ALL_OTHERS, 0, "", online_tex);    // notify offline mode
+        
+        if (intest) {
+            llSetTimerEvent(testtime);
+        } else {
+            llSetTimerEvent(scantime);
+        }
+
+        llListen(testchannel, "", owner, "");
+    }
+    
+    listen(integer channel, string name, key id, string message)
+    {
+        if (message=="online") {
+            llOwnerSay("Test active - Going to online mode...");
+            intest=1;
+            state go_online;
+        } else if (message=="reset") {
+            llResetScript();
+        } else if (message=="makevis") {
+            llSetAlpha(1.0, ALL_SIDES);            // make visible
+            llMessageLinked(LINK_ALL_OTHERS, 1, "", offline_tex);    // notify rear side visible too
+        }
+    }
+    
+    timer() 
+    {
+        if (intest) {
+            // test timeout
+            llOwnerSay("Test timeout - resuming normal operation");
+            intest=0;
+            llResetScript();
+        } else {
+            // check if the owner is online 
+            llRequestAgentData(owner, 1);
+        }
+    }
+    
+    dataserver(key queryid, string data)
+    {
+        if ((integer)data == TRUE) {
+            // offline
+            state go_online;
+        }
+    }
+    
+    touch_start(integer total_number)
+    {
+        if (llDetectedKey(0) == owner) {
+            llDialog(llGetOwner(), "Test Portrait Change\nYou are in OFFLINE mode", ["online", "reset", "makevis"], testchannel);
+            llSetTimerEvent(testtime);
+        }
+    
+        if (sayOnline) {
+            // do the public chat either way, so the owner knows what is said
+            if ((useLastOff == 0) || (lastoff == 0)) {
+                llSay(0, llKey2Name(owner) + " is currently offline...");
+            } else {
+                // okay, calculate how long you were off!
+                integer days;
+                integer hrs;
+                integer mins;
+                integer secs;
+                integer diff=llGetUnixTime() - lastoff;
+                string work="";
+                
+                days=diff/86400;
+                diff%=86400;
+                hrs=diff/3600;
+                diff%=3600;
+                mins=diff/60;
+                diff%=60;
+                secs=diff;
+    
+                if ((days==0)&&(hrs==0)&&(mins==0)&&(secs==0)) {
+                    // unlikely, but just in case, don't be completely dumb
+                    secs=1;
+                }
+                
+                work+=addstr(work, days, "day");
+                work+=addstr(work, hrs, "hour");
+                work+=addstr(work, mins, "minute");
+                work+=addstr(work, secs, "second");
+                
+                llSay(0, llKey2Name(owner) + " went offline " + work + " ago.");
+            }
+        }
+    }
+
+    state_exit()
+    {
+        llSetTimerEvent(0.0);
+    }
+}
+
+state go_offline
+{
+    on_rez(integer start_param) {
+        llResetScript();
+        if (debug) {
+            llOwnerSay("rez...");
+        }
+    }
+    
+    state_entry()
+    {
+        if (debug) {
+            llOwnerSay("go_offline...");
+        }
+        
+        // front picture should be online and 100% visible
+        // make sure the rear picture is offline and 100% visible
+        // then we will fade out the front picture. When we are done,
+        // we go to the offline state which will stablize it
+        currentfade=1.0;
+        llMessageLinked(LINK_ALL_OTHERS, 1, "", offline_tex);    // notify online mode, just in case!
+        llSetTimerEvent(fadetime);
+    }
+    
+    timer() 
+    {
+        // fade the front panel 
+        currentfade-=fadestep;
+        if (currentfade <= 0.0) {
+            // we're done!
+            state offline;
+        } else {
+            llSetAlpha(currentfade, ALL_SIDES);
+        }
+    }
+
+    state_exit()
+    {
+        llSetTimerEvent(0.0);
+    }
+}
+
+state go_online
+{
+    on_rez(integer start_param) {
+        llResetScript();
+        if (debug) {
+            llOwnerSay("rez...");
+        }
+    }
+    
+    state_entry()
+    {
+        if (debug) {
+            llOwnerSay("go_online...");
+        }
+        
+        // front picture should be offline and 100% visible
+        // make sure the rear picture is online and 100% visible
+        // then we will fade out the front picture. When we are done,
+        // we go to the offline state which will stablize it
+        currentfade=1.0;
+        llMessageLinked(LINK_ALL_OTHERS, 1, "", online_tex);    // notify offline mode, just in case!
+        llSetTimerEvent(fadetime);
+    }
+    
+    timer() 
+    {
+        // fade the front panel 
+        currentfade-=fadestep;
+        if (currentfade <= 0.0) {
+            // we're done!
+            state online;
+        } else {
+            llSetAlpha(currentfade, ALL_SIDES);
+        }
+    }
+
+    
+    state_exit()
+    {
+        llSetTimerEvent(0.0);
+    }
+}

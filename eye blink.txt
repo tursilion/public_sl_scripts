@@ -1,0 +1,87 @@
+// NOTE: no longer any need to refresh the texture
+
+// Another Invisibility Script 
+// Adapted by Tursi Jackson, based on script from Chris Knox
+// Assuming that Beatfox's v1.1 script runs every 30 seconds
+// exactly on the 30s mark, and wanting to match that
+//
+// The idea here is that at the same time, every invisiprim
+// should change to the same new texture. If they don't, things
+// bugger up. Or so I read - I need to follow up with people.
+//
+// So, at xx:00 - set2()
+//     at xx:30 - set1()
+
+// edit: note? So far everything looks okay only running set1?
+// set2 doesn't work reliably at home all the time, set1 does?
+set1()
+{
+    llSetTexture("38b86f85-2575-52a9-a531-23108d8da837", ALL_SIDES);
+}
+
+set2()
+{
+    // so this is really set1's texture
+    llSetTexture("38b86f85-2575-52a9-a531-23108d8da837", ALL_SIDES);
+//    llSetTexture("e97cf410-8e61-7005-ec06-629eba4cd1fb", ALL_SIDES);
+}
+
+init()
+{
+    // We have to assume something to start with. At worst
+    // we're all out of sync for 30 seconds.
+    set1(); 
+   // llOffsetTexture(0.468, 0, ALL_SIDES);
+    llOffsetTexture(0, 0, ALL_SIDES);   // needs to be 0,0 to work right!
+    llScaleTexture(0, 0, ALL_SIDES);
+}
+
+textureswap()
+{
+    // This code swaps the actual texture
+    if ((integer)llGetWallclock() % 60) {
+        // this is xx:30 (or should be if we started right!)
+        set1();
+    } else {
+        // this is xx:00
+        set2();
+    }
+}    
+
+default
+{
+    state_entry()
+    {
+        init();
+        // now wait for an even 30 seconds
+        while ((integer)llGetWallclock() % 30) 
+        {
+            llSleep(1.0);
+        }
+        // Got it - start ticking every 30 seconds (and change now, too)
+        llSetTimerEvent(30.0);
+        textureswap();    // but swap now, too
+    }
+
+    timer()
+    {
+        // Question - can the TimerEvent drift for lag?
+        // This code will alert me if so. Will comment out
+        // if it never happens.
+        integer drift=(integer)llGetWallclock()%30;
+        if (drift > 0) {
+            // we're not exactly on a 30 second boundary - drift?
+            llOwnerSay("Clock has drifted by " + (string)drift + " seconds.");
+            // autofix. We already missed this change.
+            llSetTimerEvent(0.0);
+            while ((integer)llGetWallclock() % 30) 
+            {
+                llSleep(1.0);
+            }
+            // Should be on track again
+            llSetTimerEvent(30.0);
+        }
+
+        textureswap();            
+    }
+}

@@ -1,0 +1,243 @@
+// Slideshow script by Tursi Jackson - 16 Jun 2011
+// Not for resale! Based on my haunted portrait script.
+// 
+// This is the front panel script
+
+// notecard name - should be a list of UUIDs
+// will process from the end of the line, so you can just copy/paste
+// from a script that dumps into chat if you like. Please have no blank
+// lines in the notecard - it will work but the code to jump ahead and back
+// will not!
+string sNotecard="list";
+
+// set to 0 if you don't want the slideshow to loop at the end
+integer Repeat = 1;
+
+// how often in seconds to fade - lower number is smoother but laggier
+float fadetime = 0.1;    
+
+// how far to fade per fadetime - smaller number is smoother but slower
+// the default of fadetime=0.1 and fadestep=0.05 makes about 2 seconds
+float fadestep = 0.1;
+
+// this is the internal menu channel, so change it for each
+// release if they will be used in the same area
+integer testchannel=861;
+
+// these are internal variables, don't touch them
+key owner;
+key current_tex;
+key next_tex;
+key g_queryId;
+integer nLine = 0;
+float currentfade;
+float nDelay = 0.0;
+integer nReady=0;
+integer nForce=1;
+// enable this to debug the state changes
+integer debug=1;
+// number of images in the card (only used for wrapping around backwards)
+integer nNumImages = 53;    
+
+default
+{
+    on_rez(integer start_param) {
+        if (debug) {
+            llOwnerSay("rez...");
+        }
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        integer idx;
+        string sName;
+
+        if (debug) {
+            llOwnerSay("default");
+        }
+
+        if (nReady == 0) {
+            if (debug) {
+                llOwnerSay("first run...");
+            }
+    
+            // init data, then figure out where to start
+            owner=llGetOwner();
+            
+            if (debug!=0) {
+                llOwnerSay("DEBUG is ON. To turn it off, set 'integer debug=0' in the script");
+            }
+            
+            nLine=0;
+            nForce=1;
+            nReady=1;
+            llOwnerSay("Ready. Click for menu.");
+        }                        
+
+        // request the next image for the back buffer
+        g_queryId = llGetNotecardLine(sNotecard, nLine);
+                
+        // listen for commands!
+        llListen(testchannel, "", owner, "");
+    }
+    
+    dataserver(key queryid, string data)
+    {
+        if (g_queryId == queryid) {
+            if (data == EOF) {
+                if (Repeat) {
+                    if (debug) {
+                        llOwnerSay("Got EOF, looping.");
+                    }
+                    nLine=0;
+                    g_queryId = llGetNotecardLine(sNotecard, nLine);                  
+                } else {
+                    if (debug) {
+                        llOwnerSay("Got EOF, finished.");
+                    }
+                }
+            } else {
+                if (debug) {
+                    llOwnerSay("Got line " + (string)nLine + "'" + data + "'");
+                }
+            
+                nLine++; 
+                data = llStringTrim(data, STRING_TRIM);
+                if (llStringLength(data) < 36) {
+                    // get the next line
+                    g_queryId = llGetNotecardLine(sNotecard, nLine);
+                } else {
+                    // take just the last 36 chars (to filter out chat noise)
+                    if (llStringLength(data) > 36) {
+                        data = llGetSubString(data, -36, -1);
+                    }
+                    // tell the back buffer what texture to load
+                    next_tex = (key)data;
+                    llMessageLinked(LINK_ALL_OTHERS, 1, "", next_tex);
+            
+                    // check if this was the title page or other forced jump
+                    if (nForce) {
+                        nForce=0;
+                        // also set ourselves 
+                        current_tex = next_tex;
+                        llSetTexture(current_tex, 0);
+                        llSetAlpha(1.0, ALL_SIDES);            // make visible
+                        // request the next image for the back buffer
+                        g_queryId = llGetNotecardLine(sNotecard, nLine);
+                    }
+                }
+            }
+        }
+    }
+    
+    listen(integer channel, string name, key id, string msg)
+    {
+        if (debug) {
+            llOwnerSay("Handling msg: '" + msg + "'");
+        }    
+        
+        if (msg=="next") {
+            nDelay=0.0;
+            state transition;
+        } else if (msg=="stop") {
+            nDelay=0.0;
+        } else if (msg=="30 sec") {
+            nDelay=30.0;
+            state transition;
+        } else if (msg=="10 sec") {
+            nDelay=10.0;
+            state transition;
+        } else if (msg=="5 sec") {
+            nDelay=5.0;
+            state transition;
+        } else if (msg=="prev") {
+            nDelay=0.0;
+            nForce=1;
+            nLine-=3;
+            if (nLine < 0) nLine+=nNumImages;
+            if (debug) {
+                llOwnerSay("Request line " + (string)nLine);
+            }
+            g_queryId = llGetNotecardLine(sNotecard, nLine);
+        } else if (msg=="+10") {
+            nDelay=0.0;
+            nForce=1;
+            nLine+=8;
+            if (debug) {
+                llOwnerSay("Request line " + (string)nLine);
+            }
+            g_queryId = llGetNotecardLine(sNotecard, nLine);
+        } else if (msg=="-10") {
+            nDelay=0.0;
+            nForce=1;
+            nLine-=12;
+            if (nLine < 0) nLine+=nNumImages;
+            if (debug) {
+                llOwnerSay("Request line " + (string)nLine);
+            }
+            g_queryId = llGetNotecardLine(sNotecard, nLine);
+        }
+    }
+
+    touch_start(integer total_number)
+    {
+        if (llDetectedKey(0) == owner) {
+          llDialog(llGetOwner(), "Select slideshow option", ["next", "prev", "stop", "30 sec", "10 sec", "5 sec", "+10", "-10"], testchannel);
+        }
+    }
+    
+    timer() {
+        // timeout - load next frame
+        if (nDelay != 0.0) {
+            state transition;
+        }
+    }
+
+}
+
+state transition
+{
+    on_rez(integer start_param) {
+        llResetScript();
+        if (debug) {
+            llOwnerSay("rez...");
+        }
+    }
+    
+    state_entry()
+    {
+        if (debug) {
+            llOwnerSay("transition...");
+        }
+        
+        // front picture should be 100% visible, and
+        // the rear picture is the next image at 100%, 
+        // then we will fade out the front picture. When we are done,
+        // we set a timer and return to the default state.
+        currentfade=1.0;
+        llSetTimerEvent(fadetime);
+    }
+    
+    timer() 
+    {
+        // fade the front panel 
+        currentfade-=fadestep;
+        if (currentfade <= 0.0) {
+            // we're done! So we do a silent swap to
+            // put the rear image in front again.
+            current_tex = next_tex;
+            llSetTexture(current_tex, 0);
+            llSetAlpha(1.0, ALL_SIDES);            // make visible
+            // and now set the timer and go back to default
+            if(debug) {
+                llOwnerSay("Setting " + (string)nDelay + " sec delay...");
+            }
+            llSetTimerEvent(nDelay);
+            state default;
+        } else {
+            llSetAlpha(currentfade, ALL_SIDES);
+        }
+    }
+}
+

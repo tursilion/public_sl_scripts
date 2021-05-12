@@ -1,0 +1,183 @@
+// Comms based on Curly's script, massively updated by Tursi
+// triggered by eye derp!
+
+integer HUD_CHANNEL = -841511254;       // channel for HUD communications
+string UPDATE_EYES_COMMAND = "update eyes";
+integer CHANGE_TIME = 15;
+float nChangeTimerFps = 10;
+
+float nDistance = 0.0;
+
+integer lightningnumber = 110;
+integer smokenumber = 10;
+float radius       = 0.32;  // Distance from emitter in meters.
+float start_size   = 0.4;   // How big particles start
+float end_size     = 0.2;   // How big particles finish as
+vector start_color = <1.0, 1.0, 1.0>; // Start color  <R,G,B>  <1.0, 1.0, 1.0> = white
+vector end_color   = <0.0, 0.0, 0.4>; // End color  <R,G,B>
+
+list lightning_parts = [ PSYS_PART_FLAGS,
+//                    PSYS_PART_EMISSIVE_MASK |         0x100
+//                    PSYS_PART_INTERP_COLOR_MASK |     0x001
+//                    PSYS_PART_INTERP_SCALE_MASK |     0x002
+//                    PSYS_PART_FOLLOW_VELOCITY_MASK,   0x020
+// can't add or OR in an initializer, so this is the raw number:
+                    0x123,
+                PSYS_SRC_PATTERN,
+                    PSYS_SRC_PATTERN_EXPLODE,
+                PSYS_SRC_BURST_RATE, 0.01,
+                PSYS_PART_START_COLOR, start_color,
+                PSYS_PART_END_COLOR, end_color,
+                PSYS_SRC_BURST_RADIUS, radius,
+                PSYS_PART_START_SCALE, <start_size, start_size, start_size>,
+                PSYS_PART_END_SCALE, <end_size, end_size, end_size>,
+                PSYS_PART_START_ALPHA, 1.0,
+                PSYS_PART_END_ALPHA, 0.05,
+                PSYS_PART_MAX_AGE, 0.01,
+                PSYS_SRC_TEXTURE, "dd36368c-4e66-873b-1a47-d5b683ad4136",   // lightning
+                PSYS_SRC_BURST_SPEED_MAX, 0.03,
+                PSYS_SRC_BURST_SPEED_MIN, 0.03
+            ];
+            
+list smoke_parts = [ PSYS_PART_FLAGS,
+//                    PSYS_PART_EMISSIVE_MASK |         0x100
+//                    PSYS_PART_INTERP_COLOR_MASK |     0x001
+//                    PSYS_PART_INTERP_SCALE_MASK |     0x002
+//                    PSYS_PART_FOLLOW_VELOCITY_MASK,   0x020
+// can't add or OR in an initializer, so this is the raw number:
+                    0x123,
+                PSYS_SRC_PATTERN,
+                    PSYS_SRC_PATTERN_EXPLODE,
+                PSYS_SRC_BURST_RATE, 0.1,
+                PSYS_PART_START_COLOR, start_color,
+                PSYS_PART_END_COLOR, end_color,
+                PSYS_SRC_BURST_RADIUS, radius,
+                PSYS_PART_START_SCALE, <start_size, start_size, start_size>,
+                PSYS_PART_END_SCALE, <end_size, end_size, end_size>,
+                PSYS_PART_START_ALPHA, 1.0,
+                PSYS_PART_END_ALPHA, 0.05,
+                PSYS_PART_MAX_AGE, 2.0,
+                PSYS_SRC_BURST_SPEED_MAX, 0.03,
+                PSYS_SRC_BURST_SPEED_MIN, 0.03
+            ];            
+
+// Convert a key to an integer using the first 8 hex digits (32 bits)
+integer key2integer(key k) {
+    return (integer)("0x" + llGetSubString((string)k, 0, 7));
+}
+
+integer channel() {
+    return HUD_CHANNEL ^ key2integer(llGetOwner());
+}
+
+ProcessGlow() {
+    if (nDistance > 0.5) {
+        // do nothing - glow at maximum
+        llSetLinkPrimitiveParamsFast(1, [PRIM_GLOW, ALL_SIDES, 1.0]);
+        llParticleSystem(smoke_parts + [PSYS_SRC_BURST_PART_COUNT, smokenumber]);
+    } else {
+        // fade the glow in
+        float fade=(nDistance*2.0);
+        llSetLinkPrimitiveParamsFast(1, [PRIM_GLOW, ALL_SIDES, fade]);
+    }
+}
+
+float ProcessListen(key id, string msg) {
+    if (llGetOwnerKey(id) != llGetOwner()) return -1;
+        
+    list parsed  = llParseString2List(msg, [";"], []);
+    string command = llList2String(parsed, 0);
+    
+//  llOwnerSay("Got command: " + (string)parsed);
+
+    if (command == UPDATE_EYES_COMMAND) {
+        integer i;
+        for (i = 1; i < llGetListLength(parsed); i+=2) {
+            string param = llList2String(parsed, i);
+            float  value = (float)llList2String(parsed, i+1);
+            if (param == "derprange") {
+                return value;
+            }
+        }
+    }
+    
+    return -1;
+}
+
+ResetState() {
+    // glow off
+    llSetLinkPrimitiveParamsFast(1, [PRIM_GLOW, ALL_SIDES, 0.0]);
+    llListen(channel(), "", NULL_KEY, "");
+    llParticleSystem([]); 
+}   
+
+
+// luna state
+default
+{
+    state_entry()
+    {
+        ResetState();
+    }
+    
+    listen(integer channel, string name, key id, string msg) {
+        if (ProcessListen(id, msg) > 0.75) {
+            state goNightmare;
+        }
+    }
+}
+
+state goNightmare
+{
+    state_entry()
+    {
+        llSetTimerEvent(1.0/nChangeTimerFps);
+        nDistance = 0.0;
+    }
+    
+    timer() 
+    {
+        nDistance+=1.0/(CHANGE_TIME*nChangeTimerFps);
+        if (nDistance >= 1.0) {
+            // done, complete transition
+            state Nightmare;
+        } else {
+            ProcessGlow();
+        }
+    }
+}
+
+state Nightmare
+{
+    state_entry()
+    {
+        ResetState();
+    }
+
+    listen(integer channel, string name, key id, string msg) {
+        float x = ProcessListen(id, msg);
+        if ((x > 0) && (x < 0.55)) {
+            state goLuna;
+        }
+    }
+}    
+
+state goLuna
+{
+    state_entry()
+    {
+        llSetTimerEvent(1.0/nChangeTimerFps);
+        nDistance = 1.0;
+    }
+    
+    timer() 
+    {
+        nDistance-=1.0/(CHANGE_TIME*nChangeTimerFps);
+        if (nDistance <= 0.0) {
+            // done, complete transition
+            state default;
+        } else {
+            ProcessGlow();
+        }
+    }
+}

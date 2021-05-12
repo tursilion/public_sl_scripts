@@ -1,0 +1,492 @@
+integer wait_for_conf = FALSE;
+integer turnmode = TRUE;
+integer test_move = FALSE;
+string temp_newcommand;
+integer temp_newcom_pos;
+float speed = 2;
+string sLastAnim="";
+integer posmode = FALSE;
+string on = "on";
+string off = "off";
+float nLastAnimTime=0;
+float move = 0;
+integer listen_num;
+integer hovermode = TRUE;
+list commands = ["X", "go", "stop", "status", "speed", "accel", "pos", "accelmode", "turnmode", "hovermode", "posmode"];
+list com_help = ["Trigger for any commands to be entered", "Enable flight enhancements", "Disable flight enhancements", "List current modes and their state", "Current impulse, place a number after to set. limit 1-500", "Current acceleration, place a number after to set. limit 10-100",  "Current coordinates", "Acceleration of movement. Use 'on' or 'off' to set.", "Slow down while turning. Use 'on' or 'off' to set.", "Allows hovering at all heights. Use 'on' or 'off' to set.", "Displays position over object. Use 'on' or 'off' to set."];
+integer channel = 2;
+integer accelmode = TRUE;
+float accel_count = 0;
+float accel = 25;
+
+
+// to overcome vertical issues, use the mouselook elevation as a percentage
+// from -100% (down) to +100% (up). 0.0 if not in mouselook.
+float lookangle() {
+    if (llGetAgentInfo(llGetOwner()) & AGENT_MOUSELOOK) {
+        float angle = PI_BY_TWO - llRot2Angle(llRotBetween(<0.0, 0.0, 1.0>, llRot2Fwd(llGetCameraRot())));
+        //  llOwnerSay("Lookat elevation " + (string)angle);
+        return (angle / PI_BY_TWO);
+    }
+    return 0.0;
+}
+integer true_false(string test)
+{
+        if(test == on)
+    {
+        return TRUE;
+    }
+    else
+    {
+        return FALSE;
+    }
+}
+string on_off(integer test)
+{
+    if(test)
+    {
+        return on;
+    }
+    else
+    {
+        return off;
+    }
+}
+
+
+help()
+{
+    llOwnerSay( "Current help");
+    integer a;
+    for(a = 0; a < llGetListLength(com_help); a++)
+    {
+        llOwnerSay( llList2String(commands, a) + " - " + llList2String(com_help, a));
+    }
+    llOwnerSay( "customize - Allows you to customize certain commands. '" + llList2String(commands, 0) + " customize [old command] [new command]' Be sure to use full words without spaces for commands. You will then need to type 'yes' to confirm.");
+    llOwnerSay( "reset - Resets entire script. '" + llList2String(commands, 0) + " reset' WARNING: Will erase all customize data and settings.");
+}
+
+
+
+customize(string old_com, string new_com)
+{
+    
+    if((old_com == "") || (new_com == ""))  
+    {
+        llOwnerSay( "Not enough information, please try again or view help for more info.");
+    }
+    else
+    {
+        integer listpos = llListFindList(commands, [old_com]);
+        if(listpos == -1)
+        {
+            llOwnerSay( "Command not found, please view help for more info on current command settings");
+        }
+        else    
+        {
+            temp_newcommand = new_com;
+            temp_newcom_pos = listpos;
+            llOwnerSay( "Do you want command '" + old_com + "' to be changed to '" + new_com + "'? Please say 'yes'");
+            wait_for_conf = TRUE;
+        }
+    }
+}
+
+
+
+com_handle(integer com_num, string message)
+{
+    if(com_num == 1) 
+    {
+        get_controls();
+    }
+    else if(com_num == 2) 
+    {
+        llReleaseControls();
+        llOwnerSay( "All stop");
+    }
+    else if(com_num == 3) 
+    {
+        llOwnerSay( "Current settings:");
+        llOwnerSay( llList2String(commands, 4) + " - " + (string)((integer)speed));
+        llOwnerSay( llList2String(commands, 5) + " - " + (string)((integer)accel));
+        llOwnerSay( llList2String(commands, 7) + " - " + on_off(accelmode));
+        llOwnerSay( llList2String(commands, 8) + " - " + on_off(turnmode));
+        llOwnerSay( llList2String(commands, 9) + " - " + on_off(hovermode));
+        llOwnerSay( llList2String(commands, 10) + " - " + on_off(posmode));
+    }
+    else if(com_num == 4) 
+    {
+        float tempvar = (integer)message;
+        if((tempvar > 0) && (tempvar <= 500))
+        {
+            speed = tempvar;
+            llOwnerSay( llList2String(commands, com_num) + " is now " + (string)((integer)speed));
+        }
+        else
+        {
+            llOwnerSay( llList2String(commands, com_num) + " is currently " + (string)((integer)speed));
+        }
+    }
+    else if(com_num == 5) 
+    {
+        float tempvar = (integer)message;
+        if((tempvar >= 10) && (tempvar <= 100))
+        {
+            accel = tempvar;
+            llOwnerSay( llList2String(commands, com_num) + " is now " + (string)((integer)accel));
+        }
+        else
+        {
+            llOwnerSay( llList2String(commands, com_num) + " is currently " + (string)((integer)accel));
+        }
+    }
+    else if(com_num == 6) 
+    {
+        vector pos = llGetPos();
+        llOwnerSay( "<" + (string)((integer)pos.x) + ", " + (string)((integer)pos.y) + ", " + (string)((integer)pos.z) + ">");
+    }
+    else if(com_num == 7) 
+    {
+        if((message == "off") || (message == "on"))
+        {
+            accelmode = true_false(message);
+            llOwnerSay( llList2String(commands, com_num) + " is now " + message);
+        }
+        else
+        {
+            llOwnerSay( llList2String(commands, com_num) + " is currently " + on_off(accelmode));
+        }
+    }
+    else if(com_num == 8) 
+    {
+        if((message == "off") || (message == "on"))
+        {
+            turnmode = true_false(message);
+            llOwnerSay( llList2String(commands, com_num) + " is now " + message);
+        }
+        else
+        {
+            llOwnerSay( llList2String(commands, com_num) + " is currently " + on_off(turnmode));
+        }
+    }
+    else if(com_num == 9) 
+    {
+        if((message == "off") || (message == "on"))
+        {
+            hovermode = true_false(message);
+            llOwnerSay( llList2String(commands, com_num) + " is now " + message);
+        }
+        else
+        {
+            llOwnerSay( llList2String(commands, com_num) + " is currently " + on_off(hovermode));
+        }
+        
+    }
+    else if(com_num == 10) 
+    {
+        if((message == "off") || (message == "on"))
+        {
+            posmode = true_false(message);
+            llOwnerSay( llList2String(commands, com_num) + " is now " + message);
+        }
+        else
+        {
+            llOwnerSay( llList2String(commands, com_num) + " is currently " + on_off(posmode));
+        }
+    }
+}
+
+
+
+set_flight()
+{
+    vector pos = llGetPos();
+    float ground = llGround(<0,0,0>);
+    if(llGetAgentInfo(llGetOwner()) & AGENT_FLYING)
+    {
+        move = 1;
+        if(hovermode && ((pos.z > 55) && (pos.z > (ground + 35))))
+        {
+            llSetForce(<0,0,9.8> * llGetMass(), FALSE);
+        }
+        else
+        {
+            llSetForce(<0,0,0>, FALSE);
+        }
+    }
+    else
+    {
+        move = 0;
+        llSetForce(<0,0,0>, FALSE);
+    }
+    
+    if(posmode)
+    {
+        llSetText("<" + (string)((integer)pos.x) + ", " + (string)((integer)pos.y) + ", " + (string)((integer)pos.z) + "> \n \n \n", <1,1,1>, 1);
+    }
+    else
+    {
+        llSetText("", <0,0,0>, 0);
+    }
+}
+
+
+
+listen_handler(string message)
+{
+    list lst_msg = llParseString2List(message, [" "],[]);
+    if(llList2String(lst_msg, 0) == llList2String(commands, 0))
+    {
+        wait_for_conf = FALSE;
+        if(llList2String(lst_msg, 1) == "help")   
+        {
+            help();
+        }
+        
+        else if(llList2String(lst_msg, 1) == "customize")  
+        {
+            customize(llList2String(lst_msg, 2), llList2String(lst_msg, 3));
+        }
+        
+        else if(llList2String(lst_msg, 1) == "reset")  
+        {
+            llOwnerSay( "Reseting Script");
+            llResetScript();
+        }
+        
+        else
+        {
+            integer listpos = llListFindList(commands, llList2List(lst_msg, 1, 1));
+            if(listpos != -1)
+            {
+                com_handle(listpos, llList2String(lst_msg, 2));
+            }
+        }
+    }
+    
+    else if((llList2String(lst_msg, 0) == "yes") && wait_for_conf)  
+    {
+        llOwnerSay( "Changing command to " + temp_newcommand);
+        commands = llDeleteSubList(commands, temp_newcom_pos, temp_newcom_pos);
+        commands = llListInsertList(commands, [temp_newcommand], temp_newcom_pos);
+    }
+    else
+    {
+        wait_for_conf = FALSE;
+    }
+}
+
+
+
+get_controls()
+{
+    llListenRemove(listen_num);
+    listen_num = llListen(channel, "", llGetOwner(), "");
+    llSetTimerEvent(.5);        
+    llSetText("", <0,0,0>, 0);
+    llRequestPermissions(llGetOwner(), PERMISSION_TAKE_CONTROLS | PERMISSION_TRIGGER_ANIMATION | PERMISSION_TRACK_CAMERA);
+}
+
+
+control_handler(integer levels, integer edges)
+{
+    
+    test_move =TRUE;
+    accel_count ++;
+    if(accel_count > accel)
+    {
+        accel_count = accel;
+    }
+    float acc_percent = 1;
+    if(accelmode)
+    {
+        accel_count ++;
+        if(accel_count > accel)
+        {
+            accel_count = accel;
+        }
+        acc_percent = accel_count / accel;
+    }
+
+    
+    if ((edges & CONTROL_LEFT)&&(move!=0)&&(levels!=0))
+    {
+
+        
+        if (sLastAnim != "") llStopAnimation(sLastAnim);
+        sLastAnim = "Rainbow Roll Left";
+        nLastAnimTime = 2.0;
+        llStartAnimation(sLastAnim);
+    }
+    if ((edges & CONTROL_RIGHT)&&(move!=0)&&(levels!=0))
+    {
+
+        if (sLastAnim != "") llStopAnimation(sLastAnim);
+        sLastAnim = "Rainbow Roll Right";
+        nLastAnimTime = 2.0;
+        llStartAnimation(sLastAnim);
+    }
+    if (((levels&(CONTROL_UP|CONTROL_DOWN)) == (CONTROL_UP|CONTROL_DOWN)) && ((edges&(CONTROL_UP|CONTROL_DOWN)) != 0))
+    {
+            llParticleSystem([
+                PSYS_PART_FLAGS,    PSYS_PART_EMISSIVE_MASK|PSYS_PART_INTERP_COLOR_MASK|PSYS_PART_INTERP_SCALE_MASK|PSYS_PART_TARGET_POS_MASK ,
+                PSYS_SRC_PATTERN,   PSYS_SRC_PATTERN_EXPLODE,
+                PSYS_SRC_BURST_RADIUS,  2.0,
+                PSYS_PART_START_COLOR,  <0.0,0.0,0.0>,
+                PSYS_PART_END_COLOR,    <0.0,0.0,0.0>,
+                PSYS_PART_START_ALPHA,  1.0,
+                PSYS_PART_END_ALPHA,    0.0,
+                PSYS_PART_START_SCALE,  <1.0,1.0,1.0>,
+                PSYS_PART_END_SCALE,    <0.1,0.1,0.1>,
+                PSYS_SRC_MAX_AGE,       5.0,        
+                PSYS_PART_MAX_AGE,      1.0,
+                PSYS_SRC_BURST_RATE,    0.0,
+                PSYS_SRC_BURST_PART_COUNT, 75,
+                PSYS_SRC_BURST_SPEED_MIN,   0.3,
+                PSYS_SRC_BURST_SPEED_MAX,   0.8
+            ]);
+    } else if ((levels&(CONTROL_UP|CONTROL_DOWN)) == 0) {
+        
+        llParticleSystem([]);
+    }
+    
+    if (((levels&(CONTROL_FWD|CONTROL_BACK)) == (CONTROL_FWD|CONTROL_BACK)) && ((edges&(CONTROL_FWD|CONTROL_BACK)) == CONTROL_BACK))
+    {
+        if (sLastAnim != "") llStopAnimation(sLastAnim);
+        sLastAnim = "Rainbow Loop Fast";
+        nLastAnimTime = 2.0;
+        llStartAnimation(sLastAnim);
+        levels = levels & (~(CONTROL_FWD|CONTROL_BACK));
+        edges = edges & (~(CONTROL_FWD|CONTROL_BACK));
+    }
+
+    
+    if ((edges&(CONTROL_FWD|CONTROL_BACK)) == (CONTROL_FWD|CONTROL_BACK)) {
+        if ((levels&(CONTROL_FWD|CONTROL_BACK)) == (CONTROL_FWD|CONTROL_BACK)) {
+            
+            llParticleSystem([
+                PSYS_PART_FLAGS,    PSYS_PART_EMISSIVE_MASK|PSYS_PART_INTERP_COLOR_MASK|PSYS_PART_INTERP_SCALE_MASK,
+                PSYS_SRC_PATTERN,   PSYS_SRC_PATTERN_EXPLODE,
+                PSYS_SRC_BURST_RADIUS,  2.0,
+                PSYS_PART_START_COLOR,  <0.0,0.0,0.0>,
+                PSYS_PART_END_COLOR,    <0.0,0.0,0.0>,
+                PSYS_PART_START_ALPHA,  1.0,
+                PSYS_PART_END_ALPHA,    0.0,
+                PSYS_PART_START_SCALE,  <1.0,1.0,1.0>,
+                PSYS_PART_END_SCALE,    <0.1,0.1,0.1>,
+                PSYS_SRC_MAX_AGE,       5.0,        
+                PSYS_PART_MAX_AGE,      1.0,
+                PSYS_SRC_BURST_RATE,    0.0,
+                PSYS_SRC_BURST_PART_COUNT, 75,
+                PSYS_SRC_BURST_SPEED_MIN,   0.3,
+                PSYS_SRC_BURST_SPEED_MAX,   0.8
+            ]);
+        } else if ((levels&(CONTROL_FWD|CONTROL_BACK)) == 0) {
+            
+            llParticleSystem([]);
+        }
+    }    
+            
+    
+    float turning = 1;
+    vector impulse = <0,0,0>;
+    if (levels & CONTROL_UP)
+    {
+        impulse += <0,0,speed>;
+    }
+    if (levels & CONTROL_DOWN)
+    {
+        impulse += <0,0,-speed>;
+    }
+    if (levels & CONTROL_FWD)
+    {
+        float scale=lookangle();
+        impulse += <speed*(1.0-llFabs(scale)), 0, speed*scale>;
+    }
+    if (levels & CONTROL_BACK)
+    {
+        impulse += <-speed,0,0>;
+    }
+    if (levels & CONTROL_ROT_RIGHT)
+    {
+        if(turnmode)
+        {
+            turning = 0.5;
+        }
+    }
+    if (levels & CONTROL_ROT_LEFT)
+    {
+        if(turnmode)
+        {
+            turning = 0.5;
+        }
+    }
+    llApplyImpulse((vector)(impulse * move * turning * acc_percent), TRUE);
+}
+
+
+
+default
+{
+    state_entry()
+    {
+        get_controls();
+    }
+    
+    on_rez(integer param)
+    {
+        get_controls();
+    }
+
+    listen(integer channel, string name, key id, string message)
+    {
+        listen_handler(message);
+    }
+    
+    control(key id, integer levels, integer edges)
+    {
+        control_handler(levels, edges);
+    }
+
+    
+    timer()
+    {
+        set_flight();
+        if(!test_move)
+        {
+            accel_count = -1;
+        }
+        test_move = FALSE;
+        if (sLastAnim != "") {
+            if (nLastAnimTime > 0) nLastAnimTime -= 0.5;
+            if (nLastAnimTime <= 0) {
+                llStopAnimation(sLastAnim);
+                sLastAnim="";
+                nLastAnimTime=0;
+            }
+        }
+    }
+    
+    
+    run_time_permissions(integer permissions)
+    {
+        if (llGetPermissions() & PERMISSION_TAKE_CONTROLS)
+        {
+            llOwnerSay("All Go, commands X <cmd> on channel " + (string)channel);
+            llTakeControls(CONTROL_DOWN|CONTROL_UP|CONTROL_FWD|CONTROL_BACK|CONTROL_LEFT|CONTROL_RIGHT|CONTROL_ROT_LEFT|CONTROL_ROT_RIGHT, TRUE, TRUE);
+        }
+        if (llGetPermissions() & PERMISSION_TRIGGER_ANIMATION)
+        {
+            llOwnerSay("Dash extensions ready.");
+            sLastAnim="";
+            nLastAnimTime=0;
+        }
+        if (llGetPermissions() & PERMISSION_TRACK_CAMERA)
+        {
+            llOwnerSay("Mouselook aiming enhancements active.");
+        }
+    }
+}
+
+

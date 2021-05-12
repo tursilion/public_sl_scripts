@@ -1,0 +1,64 @@
+// Tursi's teleport between cubes script
+// Note: max range is only 96m due to llSensor limits
+key lastAVkey = NULL_KEY;
+string fltText = "Teleportation Script";
+string Target = "Teleport Cube";
+vector dest = ZERO_VECTOR;
+// Adjust the offset for better landings
+vector offset = < 0.1, 0.1, 0.5>;
+
+default
+{
+    state_entry()
+    {
+        llSensor(Target, NULL_KEY, PASSIVE|ACTIVE, 96.0, 2*PI);
+        llSitTarget(ZERO_VECTOR, ZERO_ROTATION);
+        llSay(0, "Starting scan...");
+    }        
+    touch_start(integer i)
+    {
+        llSay(0,"Right click me and chose 'Teleport'");
+    }
+    changed(integer change)
+    {
+        if (change&CHANGED_LINK == 0)
+        {
+            return;
+        }
+        
+        key currentAVkey = llAvatarOnSitTarget();
+        
+        if (currentAVkey != NULL_KEY && lastAVkey == NULL_KEY)
+        {
+            lastAVkey = currentAVkey;        
+            if (!(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION))  
+                llRequestPermissions(currentAVkey,PERMISSION_TRIGGER_ANIMATION);
+            llUnSit(currentAVkey);
+            llStopAnimation("sit");
+            //llResetScript();
+            lastAVkey = NULL_KEY;
+        }
+    }
+    no_sensor()
+    {   
+        llSay(0, "No teleport target located. Place destination and then reset this script.");
+    }
+    sensor(integer num)
+    {
+        llSay(0, "Found " + (string)num + " matches.");
+        
+        if (num > 1)
+        {
+            llSay(0, "Too many named targets in range - update names.");
+            return;
+        }
+
+        llSetSitText("Teleport");
+        llSetText(fltText, <1,1,1>, 1);
+
+        dest=llDetectedPos(0)+offset; 
+        llSitTarget((dest-llGetPos()) * (ZERO_ROTATION / llGetRot()), ZERO_ROTATION / llGetRot());
+        
+        llSay(0, "Teleport cube initialized - target at " + (string)dest);
+    }
+}

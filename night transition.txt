@@ -1,0 +1,68 @@
+float distance = 0.0;
+
+float finalalpha=0.2;
+float repeats=1000.0;
+vector color=<0.0,0.0,0.0>;
+integer direction=1;
+
+//vector deploypos=<199.53310, 117.45050, 1498.19600>;
+//vector hidepos=<199.53310, 117.45050, 1511.84600>;
+vector deploypos=<0,0,0>;
+vector hidepos=<0,0,0>;
+
+default
+{
+    on_rez(integer x) 
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {   
+        if ((deploypos == <0,0,0>)||(hidepos==<0,0,0>)) {
+//            deploypos=llGetPos();
+//            llOwnerSay("current position is " + (string)deploypos + ". Update script and reset.");
+//        } else {
+            llSetRegionPos(hidepos);
+            llSetLinkPrimitiveParamsFast(LINK_SET, [PRIM_COLOR, ALL_SIDES, <0.0,0.0,0.0>, 0.0, PRIM_TEXTURE, ALL_SIDES, "7f3bff81-848c-a9a4-a671-3081d14cad8a", <1.0, 0.5, 0.0>*repeats, <0.0, 0.25, 0.0>, 0.0]);
+            llListen(1, "Tursi Jackson", NULL_KEY, "");
+            llListen(1, "Giskard Triellis", NULL_KEY, "");
+            distance = 0.0;
+        }
+    }
+
+    listen(integer channel, string name, key id, string msg)
+    {
+        if (msg == "reset") llResetScript();
+        if (msg == "dark") {
+            llSetRegionPos(deploypos);
+            color=<0.0,0.0,0.0>;
+            direction=1;
+            llSetTimerEvent(0.05);
+        } else if (msg == "undo") {
+            direction=-1;
+            llSetTimerEvent(0.05);
+        }
+    }
+    
+    timer() 
+    {
+        distance+=0.005*direction;
+        if (direction > 0) {
+            if (distance >= 1) {
+               llSetLinkPrimitiveParamsFast(LINK_SET, [PRIM_COLOR, ALL_SIDES, color, finalalpha, PRIM_TEXTURE, ALL_SIDES, "7f3bff81-848c-a9a4-a671-3081d14cad8a", <1.0, 0.5, 0.0>, <0.0, 0.7, 0.0>, 0.0]);
+                llSetTimerEvent(0.0);
+            } else {
+                llSetLinkPrimitiveParamsFast(LINK_SET, [PRIM_COLOR, ALL_SIDES, color, finalalpha*distance, PRIM_TEXTURE, ALL_SIDES, "7f3bff81-848c-a9a4-a671-3081d14cad8a", <1.0, 0.5, 0.0>*(repeats-(repeats*distance)+1.0), <0.0, 0.25+(distance*0.45), 0.0>, DEG_TO_RAD*(distance*1800)]);
+            }
+        } else {
+            if (distance <= 0) {
+                llSetLinkPrimitiveParamsFast(LINK_SET, [PRIM_COLOR, ALL_SIDES, color, 0.0, PRIM_TEXTURE, ALL_SIDES, "7f3bff81-848c-a9a4-a671-3081d14cad8a", <1.0, 0.5, 0.0>*repeats, <0.0, 0.25, 0.0>, 0.0]);
+                llSetRegionPos(hidepos);
+                llSetTimerEvent(0.0);
+            } else {
+                llSetLinkPrimitiveParamsFast(LINK_SET, [PRIM_COLOR, ALL_SIDES, color, finalalpha*distance, PRIM_TEXTURE, ALL_SIDES, "7f3bff81-848c-a9a4-a671-3081d14cad8a", <1.0, 0.5, 0.0>*(repeats-(repeats*distance)+1.0), <0.0, 0.25+(distance*0.45), 0.0>, DEG_TO_RAD*(distance*1800)]);
+            }
+        }            
+    }
+}

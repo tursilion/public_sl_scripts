@@ -1,0 +1,186 @@
+// Clock Script by Tursi Jackson, feel free to borrow but please attribute!
+// Nothing in this script normally needs to be editted
+// (Unless you want to hard-code the offset - good idea if you change it often) 
+// Note that the offsets and everything else are cleared on re-rez
+
+integer do_24_hr_mode = 0;      // set to 1 if you want a 24-hr dial instead of 12-hr
+integer default_hr_offset=0;    // change this one if you want to change the default
+
+integer H; //Hours
+integer M; //Minutes
+float pos;
+rotation rot;
+integer hr_offset;      // how many hours from Linden Time are we offset? (resets on rez)
+integer min_offset=0;   // minute hand script will update this for us
+integer menu_chan = -9991;      // menu comm channel
+integer listen_handle=0;
+integer listen_timeout=0;
+
+// there are 12 hrs, and 60 mins in an hour,
+// so 12*60 means there are 720 positions for the hour hand
+
+Update() {
+    integer T = (integer)llGetWallclock(); // Get time PST
+    
+    if (!do_24_hr_mode) {
+        if (T > 43200) //If it's after noon
+        {
+            T = T - 43200; //Subtract 12 hours
+        }
+    }
+
+    H = T / 3600; //get hours
+    M = (T - (H * 3600)) / 60; //get minutes
+    
+    // deal with the offset
+    H+=hr_offset;
+    if (do_24_hr_mode) {
+        while (H >= 24) {
+            H-=24;
+        }
+    } else {
+        while (H >= 12) {
+            H-=12;
+        }
+    }
+    M+=min_offset;
+    while (M >= 60) {
+        M-=60;
+    }
+    
+    // now turn that into a rotation
+    pos=H*60+M;
+    if (do_24_hr_mode) {
+        pos=pos/4.0;                        // get degrees
+    } else {
+        pos=pos/2.0;                        // get degrees
+    }
+    vector rad=<0,0,(360-pos)*DEG_TO_RAD>;    // get radians
+    rot = llEuler2Rot(rad);             // get rotation
+    llSetLocalRot(rot);
+}
+
+Menu() {
+    llDialog(llGetOwner(), "Update Clock", [ "+1min", "-1min", "+5min", "-5min", "+1hr", "-1hr", "reset" ], menu_chan);
+    listen_timeout=5;   // mins till listen is disabled
+}    
+        
+default
+{
+    state_entry()
+    {
+        hr_offset=default_hr_offset;
+        Update();
+        llOwnerSay("All offsets reset to default.");
+        // updating once a minute is enough for the hour hand
+        llSetTimerEvent(60);
+    }
+    
+    timer() {
+        Update();
+        
+        // removing inactive listens is good for the sim
+        if (listen_timeout > 0) {
+            --listen_timeout;
+            if (listen_timeout == 0) {
+                llListenRemove(listen_handle);
+                listen_handle=0;
+            }
+        }
+    }
+    
+    on_rez(integer start) {
+        // make sure we're all clear (and turn off listens we don't need)
+        llResetScript();
+    }
+    
+    // note that if the menu isn't used, we don't need a listen
+    touch_start(integer num) {
+        if (llDetectedKey(0) == llGetOwner()) {
+            Update();
+            listen_handle = llListen(menu_chan, "", llGetOwner(), "");
+            Menu();
+        }
+    }
+
+    listen(integer channel, string name, key id, string msg) {
+        integer valid=0;
+        // minute updates should not be needed in most cases
+        // Maybe the Newfies will appreciate it? :)
+        if (msg == "+1min") {
+            llMessageLinked(LINK_ALL_OTHERS, 1, "min", NULL_KEY);
+            valid=1;
+        }
+        if (msg == "-1min") {
+            llMessageLinked(LINK_ALL_OTHERS, -1, "min", NULL_KEY);
+            valid=1;
+        }
+        if (msg == "+5min") {
+            llMessageLinked(LINK_ALL_OTHERS, 5, "min", NULL_KEY);
+            valid=1;
+        }
+        if (msg == "-5min") {
+            llMessageLinked(LINK_ALL_OTHERS, -5, "min", NULL_KEY);
+            valid=1;
+        }
+        
+        // hr updates are local to this script
+        if (msg == "+1hr") {
+            ++hr_offset;
+            if (do_24_hr_mode) {
+                if (hr_offset >= 24) {
+                    hr_offset=0;
+                }
+            } else {
+                if (hr_offset >= 12) {
+                    hr_offset=0;
+                }
+            }
+            Update();
+            llOwnerSay("Hour offset now " + (string)hr_offset + " hours.");
+            valid=1;
+        }
+        if (msg == "-1hr") {
+            --hr_offset;
+            if (do_24_hr_mode) {
+                if (hr_offset < 0) {
+                    hr_offset=23;
+                }
+            } else {
+                if (hr_offset < 0) {
+                    hr_offset=11;
+                }
+            }
+            Update();
+            llOwnerSay("Hour offset now " + (string)hr_offset + " hours.");
+            valid=1;
+        }
+        if (msg == "reset") {
+            hr_offset=default_hr_offset;
+            llMessageLinked(LINK_ALL_OTHERS, 0, "reset", NULL_KEY);
+            Update();
+            llOwnerSay("All offsets reset to default.");
+            valid=1;
+        }
+
+        if (valid == 1) {
+            // repeat the dialog       
+            Menu();
+        }            
+    }
+    
+    link_message(integer sender_num, integer num, string str, key id) {
+        if (str == "newmin") {
+            min_offset=num;
+            Update();
+        }
+    }
+            
+    changed(integer mask)
+    {   // Triggered when the object containing this script changes owner.
+        if(mask & CHANGED_OWNER)
+        {
+            llResetScript();
+        }
+    }
+}

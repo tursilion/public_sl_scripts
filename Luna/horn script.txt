@@ -1,0 +1,145 @@
+integer HUD_CHANNEL = -841511254;       // channel for HUD communications
+string HORN_POWER_COMMAND = "horn set power";
+
+//---------------------------------------------------------------------
+
+
+// Convert a key to an integer using the first 8 hex digits (32 bits)
+integer key2integer(key k) {
+    return (integer)("0x" + llGetSubString((string)k, 0, 7));
+}
+
+integer channel() {
+    return HUD_CHANNEL ^ key2integer(llGetOwner());
+}
+
+integer listener;
+startListener() {
+    llListenRemove(listener);
+    listener = llListen(channel(), "", NULL_KEY, "");
+}
+
+default
+{
+    state_entry()
+    {
+        startListener();
+        llSetStatus(STATUS_PHANTOM,FALSE);
+    }
+
+    listen(integer channel, string name, key id, string msg)
+    {
+        if (llGetOwnerKey(id) != llGetOwner()) return;
+            
+        list parsed  = llParseString2List(msg, [";"], []);
+        string command = llList2String(parsed, 0);
+        if (command == HORN_POWER_COMMAND) {
+            integer power = (integer)llList2String(parsed, 1);
+            
+            // ---- Link 2 ----
+            if (power == 2) {
+                llSetLinkTextureAnim(2+7, ANIM_ON|LOOP|SMOOTH, ALL_SIDES, 1, 10, 0, 10, 10);
+                llSetLinkPrimitiveParamsFast(2+7, [PRIM_GLOW, ALL_SIDES, 0.3, PRIM_POINT_LIGHT, TRUE, <1, 1, 1>, 1.0, 5.0, 0.25]);
+                llSetLinkAlpha(2+7, 0.2, ALL_SIDES);
+            } else {
+                llSetLinkAlpha(2+7, 0.0, ALL_SIDES);
+                llSetLinkPrimitiveParamsFast(2+7, [PRIM_GLOW ,ALL_SIDES,  0.0, PRIM_POINT_LIGHT, FALSE, <1, 1, 0>, 1.0, 10.0, 0.75]);
+            }
+            
+            // ---- Link 3 ----
+            if (power > 2) {
+                llSetLinkTextureAnim(3+7, ANIM_ON|LOOP|SMOOTH, ALL_SIDES, 1, 10, 0, 10, 10);
+                llSetLinkPrimitiveParamsFast(3+7, [PRIM_GLOW ,ALL_SIDES,  0.3, PRIM_POINT_LIGHT, TRUE, <1, 1, 1>, 1.0, 10.0, 0.25]);
+                llSetLinkAlpha(3+7, 0.2, ALL_SIDES);
+            } else {
+                llSetLinkPrimitiveParamsFast(3+7, [PRIM_GLOW ,ALL_SIDES,  0.0, PRIM_POINT_LIGHT, FALSE, <1, 1, 0>, 1.0, 10.0, 0.75]);
+                llSetLinkAlpha(3+7, 0.0, ALL_SIDES);
+            }
+            
+            // ---- Link 4 ----
+            if (power == 1) {
+                llSetLinkTextureAnim(4+7, ANIM_ON|LOOP|SMOOTH, ALL_SIDES, 10, 10, 45, 10, 3);
+                llSetLinkPrimitiveParamsFast(4+7, [PRIM_GLOW ,ALL_SIDES,  0.3]);
+                llSetLinkAlpha(4+7, 0.2, ALL_SIDES);
+                llLinkParticleSystem(4+7, []);
+            } else if (power >= 4) {
+                // in overdrive - we are the spark emitter
+                // Mane Sparkles by Marjan Tomba
+                // Created on Oct 3, 2011
+                // Free to use as needed.
+                
+                integer number     =  4;   // Number of partcles to appear each burst
+                float rate         = .75;   // Number of bursts each second  0.1 = 10 bursts each second
+                float radius       = 0.1;   // Distance from emitter in meters.
+                float age          = 0.5;   // How long the partcles last
+                float start_size   = 0.4;   // How big particles start
+                float end_size     = 0.2;   // How big particles finish as
+                vector start_color = <1.0, 1.0, 1.0>; // Start color  <R,G,B>  <1.0, 1.0, 1.0> = white
+                vector end_color   = <1.0, 1.0, 1.0>; // End color  <R,G,B>
+                float   beginAngle = 0.0;
+                float   endAngle   = 0.1;
+                vector  omega      = <0.0, 0.0, 0.0>;
+                float speed        = 4.0;
+                vector accel       = <0.0, 0.0, -5.0>;
+                
+                llLinkParticleSystem(4+7, 
+                [
+                    PSYS_PART_FLAGS,
+                        PSYS_PART_EMISSIVE_MASK |
+                        PSYS_PART_INTERP_COLOR_MASK |
+                        PSYS_PART_INTERP_SCALE_MASK |
+                        PSYS_PART_FOLLOW_VELOCITY_MASK ,                
+                    PSYS_SRC_PATTERN,
+                        PSYS_SRC_PATTERN_EXPLODE,
+                    PSYS_SRC_ANGLE_BEGIN,       beginAngle,
+                    PSYS_SRC_ANGLE_END,         endAngle,
+                    PSYS_SRC_BURST_RADIUS,      radius,
+                    PSYS_SRC_OMEGA,             omega,
+                    PSYS_SRC_BURST_SPEED_MIN,   speed,
+                    PSYS_SRC_BURST_SPEED_MAX,   speed, 
+                    PSYS_SRC_ACCEL,accel,
+                    PSYS_PART_START_COLOR, start_color,
+                    PSYS_PART_END_COLOR, end_color,
+                    PSYS_SRC_BURST_PART_COUNT, number,
+                    PSYS_SRC_BURST_RATE, rate,
+                    PSYS_PART_START_SCALE, <start_size, start_size, start_size>,
+                    PSYS_PART_END_SCALE, <end_size, end_size, end_size>,
+                    PSYS_PART_START_ALPHA, 1.0,
+                    PSYS_PART_END_ALPHA, 0.05,
+                    PSYS_PART_MAX_AGE, age,
+                    PSYS_SRC_TEXTURE, "bdd55733-13dd-df5b-9128-90c3b13f6570"
+                ]);
+            } else {
+                llSetLinkAlpha(4+7, 0.0, ALL_SIDES);
+                llLinkParticleSystem(4+7, []);
+                llSetLinkPrimitiveParamsFast(4+7, [PRIM_GLOW ,ALL_SIDES,  0.0]);
+            }
+            
+            // ---- Link 7 -----
+            // power is 0-4, 0=off, 4=100%
+            float fpower = 0.25 * (float)(power);
+            if (fpower > 0.0) {
+                llSetLinkPrimitiveParamsFast(7+7, [PRIM_GLOW ,ALL_SIDES,  fpower]);
+            } else {
+                llSetLinkPrimitiveParamsFast(7+7, [PRIM_GLOW ,ALL_SIDES,  0.0]);
+            }            
+            
+            // ---- Link 8 ----
+            // power is 0-4, 0=off, 4=100%
+            fpower = 0.25 * (float)(power) / 2.0;
+            if (fpower >= 0.49) fpower = 1.0;
+            if (fpower > 0.0) {
+                llSetLinkPrimitiveParamsFast(8+7, [PRIM_GLOW ,ALL_SIDES,  fpower]);
+            } else {
+                llSetLinkPrimitiveParamsFast(8+7, [PRIM_GLOW ,ALL_SIDES,  0.0]);
+            }            
+            
+        }
+    }
+    on_rez(integer start_param)
+    {
+        llResetScript();
+    }
+        
+        
+}

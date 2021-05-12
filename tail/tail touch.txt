@@ -1,0 +1,48 @@
+string sLast = "";
+integer cnt = 0;
+    
+default
+{
+    touch_start(integer total_number)
+    {
+        integer x = (integer)llFrand(5);
+        string s = llDetectedName(0);
+
+        if (s != sLast) {
+            sLast=s;
+            cnt=0;
+        } else {
+            cnt++;
+        }
+        
+        // break the name into just the first word, they know who they are...
+        string fullname=s;
+        integer pos=llSubStringIndex(s, " ");
+        if (-1 != pos) {
+            s=llGetSubString(s, 0, pos-1);
+        }
+
+        if ( 0 == cnt ) {
+            if (0 == x) {
+                llSay(0, s + ", look but don't touch, then touch when I'm not looking. ;)");
+            } else if (1 == x) {
+                llSay(0, "Like what you see, " + s + "?");
+            } else if (2 == x) {
+                llSay(0, "Now show me yours, " + s + "! ;)");
+            } else if (3 == x) {
+                llSay(0, "Nice touch, " + s + " ;)");
+            } else {
+                llSay(0, "Oooh, do it again, " + s + "!");
+            }
+        } else if (1 == cnt) {
+            llSay(0, s + " seems to like petting tails ;)");
+        } else if (2 == cnt) {
+            llSay(0, "Mmm... careful, " + s + ", you're gonna get bit. ;)");
+        } else {
+            llSay(0, "All right, " + fullname + ", time for a little nibble ;)");
+            cnt=0;
+            sLast="";
+        }
+            
+    }
+}

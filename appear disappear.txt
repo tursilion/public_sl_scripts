@@ -1,0 +1,83 @@
+// Appear/disappear script
+// Just set the settings you want at the top here and drop it in the object
+// Limitation: ALL prims must be 100% alpha, no partial. If you need different levels,
+// ping Sila. ;)
+
+// Set this to "0" to be invisible on rez, and "1" to be visible on rez
+integer ShowOnRez = 0;
+
+// Put a user UUID here to lock to a specific user, or leave as "" for all access
+key UserKey = "";
+
+// That's all! Don't touch the rest.
+
+//===========================================================================
+
+default
+{
+    on_rez(integer i) 
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        if (ShowOnRez) {
+            state ShowIt;
+        } else {
+            state HideIt;
+        }
+    }
+}
+
+// this state handles the object being visible
+state ShowIt
+{
+    on_rez(integer i) 
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        llSetLinkPrimitiveParamsFast(LINK_SET, [PRIM_PHANTOM, FALSE]);
+        // use llSetAlpha, otherwise we need to know the color of every link!
+        llSetLinkAlpha(LINK_SET, 1.0, ALL_SIDES);
+    }
+    
+    touch_start(integer num)
+    {
+        if (UserKey != "") {
+            if (llGetOwnerKey(llDetectedKey(0)) != UserKey) {
+                return;
+            }
+        }
+        state HideIt;
+    }
+}
+
+// this state handles the object being hidden
+state HideIt
+{
+    on_rez(integer i) 
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        llSetLinkPrimitiveParamsFast(LINK_SET, [PRIM_PHANTOM, TRUE]);
+        // use llSetAlpha, otherwise we need to know the color of every link!
+        llSetLinkAlpha(LINK_SET, 0.0, ALL_SIDES);
+    }
+    
+    touch_start(integer num)
+    {
+        if (UserKey != "") {
+            if (llGetOwnerKey(llDetectedKey(0)) != UserKey) {
+                return;
+            }
+        }
+        state ShowIt;
+    }
+}

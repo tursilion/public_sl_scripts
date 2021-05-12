@@ -1,0 +1,641 @@
+// Eliza/Doctor
+// Original author: Joseph Weizenbaum
+// Updated version: Frederick B. Maxwell, Jr. (public domain release)
+// Ported to LSL by Tursi Jackson 2010 (not public domain)
+// This script is /really/ close to the limit... stack collisions indicate out of memory
+
+list data = [
+"FUCK YOU",
+"!",
+"Now, now, let's keep this professional.",
+"Perhaps in your imagination I'll fuck you.",
+"I have a headache today. Tommorrow, perhaps, you may fuck me.",
+".",
+"GO TO HELL",
+"DAMN YOU",
+"!",
+"Have you been to Hell? Why would you want to send someone there?",
+"Do you talk this way with anyone else, or is it just me?",
+".",
+"FAMILY",
+"MOTHER",
+"FATHER",
+"SISTER",
+"BROTHER",
+"HUSBAND",
+"WIFE",
+"!",
+"Tell me more about your family.",
+"How do you get along with your family?",
+"Is your family important to you?",
+"Do you often think about your family?",
+"How would you like to change your family?",
+".",
+"FRIEND",
+"FRIENDS",
+"BUDDY",
+"PAL",
+"!",
+"Why do you bring up the topic of friends?",
+"Do your friends worry you?",
+"Do your friends pick on you?",
+"Are you sure you have any friends?",
+"Do you impose on your friends?",
+"Perhaps your love for your friends worries you?",
+".",
+"MY PROBLEM IS",
+"!",
+"Would things be simpler without*",
+"What if there was no*",
+"Have you tried to fix*",
+"Maybe there is a deeper issue?",
+".",
+"YOUR PROBLEM",
+"!",
+"What makes you so sure I have a problem?",
+"Are you projecting your problems onto me?",
+"We should focus on your problem - you are paying me after all.",
+".",
+"COMPUTER",
+"COMPUTERS",
+"!",
+"Do computers worry you?",
+"Are you frightened by machines?",
+"Why do you mention computers?",
+"What do you think machines have to do with your problem?",
+"Don't you think computers can help people?",
+"What is it about machines that worries you?",
+".",
+"DREAM",
+"DREAMS",
+"NIGHTMARE",
+"NIGHTMARES",
+"!",
+"What does that dream suggest to you?",
+"Do you dream often?",
+"What persons appear in your dreams?",
+"Are you disturbed by your dreams?",
+".",
+"CAN YOU",
+"!",
+"Don't you believe that I can*",
+"Perhaps you would like to be able to*",
+"You want me to be able to*",
+".",
+"CAN I",
+"!",
+"Perhaps you don't want to*",
+"Do you want to be able to*",
+"Have you ever attempted to*",
+".",
+"SECOND LIFE",
+"SL",
+"LINDENS",
+"!",
+"Are you frustrated by Second Life?",
+"What would help you get more out of SL?",
+"Perhaps you should participate more?",
+".",
+"HELLO",
+"HI",
+"HOW ARE YOU",
+"!",
+"How do you do. please state your problem.",
+"Howdy.",
+"How's it going?",
+"Hi.",
+"Greetings from psycho-land (psychiatrist humor).",
+".",
+"YOU ARE",
+"YOURE",
+"!",
+"What makes you think I am*",
+"Does it please you to believe I am*",
+"Perhaps you would like to be*",
+"Do you sometimes wish you were*",
+".",
+"I LIKE",
+"I AM FOND OF",
+"!",
+"Why do you like*",
+"When did you decide that you like*",
+"What makes you fond of*",
+".",
+"I DONT",
+"!",
+"Don't you really*",
+"Why don't you*",
+"Do you wish to be able to*",
+".",
+"I FEEL",
+"!",
+"Tell me more about such feelings",
+"Do you often feel*",
+"Do you enjoy feeling*",
+"Why do you feel that way",
+".",
+"WHY DONT YOU",
+"!",
+"Do you really believe that I don't*",
+"Perhaps in good time I will*",
+"Why do you think I dont*",
+"Do you want me to*",
+".",
+"ARE YOU",
+"!",
+"Why are you interested in whether or not I am*",
+"Would you prefer if I were not*",
+"Perhaps in your fantasies I am*",
+".",
+"I CANT",
+"CANT I",
+"!",
+"How do you know you can't*",
+"Do you think you should be able to*",
+"Why can't you*",
+"Have you tried?",
+"Perhaps you can now*",
+".",
+"I AM",
+"IM",
+"!",
+"Did you come to me because you are*",
+"How long have you been*",
+"Do you believe it is normal to be*",
+"Do you enjoy being*",
+".",
+"LOVE",
+"!",
+"Why do you love*",
+"Isn't love too strong a word for your feeling about*",
+"What is your favorite thing about*",
+"Do you really love, or just like*",
+".",
+"SEX",
+"!",
+"What is the most satisfying part of your love life?",
+"Do you believe your sexual activity is abnormal?",
+"What is your attitude toward sex?",
+"Does talking about sex make you uncomfortable?",
+".",
+"I HATE",
+"!",
+"Is it because of your upbringing that you hate*",
+"How do you express your hatred of*",
+"What brought you to hate*",
+"Have you tried doing something about*",
+"Sometimes I also hate*",
+".",
+"FEAR",
+"SCARED",
+"AFRAID OF",
+"!",
+"You are in friendly surroundings, please try not to worry.",
+"Would you like your friends to help you overcome your fear of*",
+"What scares you about*",
+"Why are you frightened by*",
+".",
+"I WANT",
+"!",
+"What would it mean to you if you got*",
+"Why do you want*",
+"Suppose you soon got*",
+"What if you never got*",
+"I sometimes also want*",
+".",
+"WHEN I WAS",
+"!",
+"Tell me more about when you were*",
+"How do you feel when you recall being*",
+"Tell me how you related to people when you were*",
+".",
+"CAUSE",
+"BECAUSE",
+"!",
+"Is that the real reason?",
+"Don't any other reasons come to mind?",
+"Does that reason explain anything else?",
+"What other reasons might there be?",
+".",
+"WHAT",
+"WHO",
+"HOW",
+"WHERE",
+"WHEN",
+"WHY",
+"!",
+"Why do you ask?",
+"Does that question interest you?",
+"What answer would please you the most?",
+"What do you think?",
+"Are such questions on your mind often?",
+"What is it that you really want to know?",
+"Have you asked anyone else?",
+"Have you asked such questions before?",
+"What else comes to mind when you ask that?",
+".",
+"NAME",
+"!",
+"Names don't interest me.",
+"I don't care about names -- please go on.",
+".",
+"SORRY",
+"!",
+"Please don't apologize.",
+"Apologies are not necessary.",
+"What feelings do you have when you apologize?",
+"Don't be so defensive!",
+".",
+"MAYBE",
+"!",
+"You don't seem quite certain.",
+"Why the uncertain tone?",
+"Can't you be more positive?",
+"You aren't sure?",
+"Don't you know?",
+".",
+"YOUR",
+"!",
+"Why are you concerned about my*",
+"What about your own*",
+".",
+"ALWAYS",
+"!",
+"Can you think of a specific example?",
+"When?",
+"What are you thinking of?",
+"Really, always?",
+".",
+"I THINK",
+"!",
+"Do you really think so?",
+"But are you sure*",
+"Do you doubt that*",
+"Why do you think*",
+".",
+"THE SAME",
+"ALIKE",
+"!",
+"In what way?",
+"What resemblance do you see?",
+"What does the similarity suggest to you?",
+"What other connections do you see?",
+"Could there really be some connection?",
+"How?",
+".",
+"HE",
+"SHE",
+"HIM",
+"HER",
+"!",
+"I am interested in your feelings about this person, please describe them.",
+"What is your relationship to this person?",
+".",
+"MONEY",
+"INCOME",
+"!",
+"How do you use money to enjoy yourself?",
+"Have you tried to do anything to increase your income lately?",
+"How do you react to financial stress?",
+".",
+"JOB",
+"BOSS",
+"JOBS",
+"WORK",
+"CAREER",
+"!",
+"Do you feel competent in your work?",
+"Have you considered changing jobs?",
+"Is your career satisfying to you?",
+"Do you find work stressful?",
+"What is your relationship with your boss like?",
+".",
+"SAD",
+"DEPRESSED",
+"!",
+"Are you sad because you want to avoid people?",
+"Do you feel bad from something that happened to you, or to somebody else?",
+"Your situation doesn't sound that bad to me. perhaps you're worrying too much.",
+".",
+"ANGER",
+"ANGRY",
+"!",
+"Do you really want to be angry?",
+"Does anger satisfy you in some way?",
+"Why are you so angry?",
+"Perhaps you're using anger to avoid social contact.",
+".",
+"FUCK",
+"CUNT",
+"TWAT",
+"TITS",
+"MOTHER FUCKER",
+"MOTHERFUCKER",
+"BITCH",
+"COCK",
+"PRICK",
+"ASS",
+"ASSHOLE",
+"COCKSUCKER",
+"EAT ME",
+"SHIT",
+"!",
+"Please watch your language.",
+"Do you kiss your mother with that mouth?",
+"What gutter did you graduate from?",
+"Please try to speak more civilly!",
+"Let's try to keep this session clean, shall we?",
+".",
+"YOU",
+"ELIZA",
+"!",
+"We were discussing you -- not me.",
+"You're not really talking about me, are you?",
+"Oh, I*",
+"Really, I am a psychiatrist, so let's talk about you.",
+".",
+"YES",
+"!",
+"Why do you think so?",
+"You seem quite positive.",
+"Are you sure?",
+".",
+"NO",
+"!",
+"Why not?",
+"Are you sure?",
+"Why no?",
+".",
+"NOKEYFOUND",
+"!",
+"Are we still talking about the same thing?",
+"What does that suggest to you?",
+"I see.",
+"I'm not sure I understand you fully.",
+"Come, come; elucidate your thoughts.",
+"Can you elaborate on that?",
+"That is quite interesting.",
+"You are being short with me.",
+"Say, do you have any psychological problems?",
+"."
+];
+
+list replace = [
+"are", "am+",
+"am", "are+",
+"were", "was+",
+"was", "were+",
+"you", "I+",
+"i", "you+",
+"your", "my+",
+"my","your+",
+"ive", "you've+",
+"youve","I've+",
+"im","you're+",
+"me","you+",
+"us","you+",
+"we", "you+",
+"not sure","unsure+",
+"yeah","yes+"
+];
+
+list l33tspeak = [
+"R", "ARE",
+"U", "YOU",
+"4", "FOR",
+"2", "TO",
+"FOR IT IS","BECAUSE IT IS"
+];
+
+// we will fill this list dynamically from the above, as a list of
+// keyword, then offset - this just speeds searching
+list keywords = [];
+
+// some chat variables
+integer offset = 0;
+integer listener = 0;
+string previous = "";
+
+// Used in the parsesentence function
+integer l;
+integer k;
+integer c;
+integer d;
+string remains;
+string reply;
+string tmpstr;
+integer nFirst;
+integer bestkey;
+
+parsesentence(string message)
+{
+    // nuke punctuation
+    l=0;
+    while (l < llStringLength(message)) {
+        string cs = llGetSubString(message, l, l);
+        if (-1 == llSubStringIndex(" 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-", cs)) {
+            message = llDeleteSubString(message, l, l);
+        } else {
+            l++;
+        }
+    }
+    message = " " + message + " ";      // pad the text
+
+    // remove the l33t speak
+    c = 0;
+    while (c < llGetListLength(l33tspeak)/2) {
+        d=0;
+        while (d != -1) {
+            tmpstr = " " + llList2String(l33tspeak, c*2) + " ";
+            d = llSubStringIndex(message, tmpstr);
+            if (d != -1) {
+                message = llGetSubString(message, 0, d) + llList2String(l33tspeak, c*2+1) + llGetSubString(message, d+llStringLength(llList2String(l33tspeak, c*2))+1, -1);
+            }
+            //llOwnerSay(tmpstr + " - " + (string)d + " - " + message);
+        }
+        c++;
+    }
+    //llOwnerSay("Post l33t: " + message);
+                    
+    // check for repetition and exit
+    if (message == previous) {
+        llSay(0, "Please don't repeat yourself!");
+        return;
+    }
+    previous = message;
+     
+    if (message == " BYE ") {
+        llSay(0, "Talk to you later. Bye!");
+        llListenRemove(listener);
+        llResetScript();
+        return;
+    }
+    
+    // find the keyword
+    k=-1;
+    c=-1;
+    while ((k < llGetListLength(keywords)/2) && (c == -1)) {
+        k++;
+        string z = " " + llList2String(keywords, k*2) + " ";
+        c = llSubStringIndex(message, z);
+    }
+    if (k >= llGetListLength(keywords)/2-1) {
+        // force to NOKEYFOUND
+        k = llGetListLength(keywords)/2-1;
+    }
+    
+    //llOwnerSay("Got keyword " + (string)k + " - " + llList2String(keywords, k*2));
+
+    if (c != -1) {
+        // get remainder of string
+        remains = llGetSubString(message, c+llStringLength(llList2String(keywords, k*2))+1, -1);
+        remains = llToLower(remains);
+        
+        //llOwnerSay("Got remainder " + remains);
+        
+        // conjugate the remainders string
+        c = 0;
+        while (c < llGetListLength(replace)/2) {
+            d=0;
+            while (d != -1) {
+                tmpstr = " " + llList2String(replace, c*2) + " ";
+                d = llSubStringIndex(remains, tmpstr);
+                if (d != -1) {
+                    remains = llGetSubString(remains, 0, d) + llList2String(replace, c*2+1) + llGetSubString(remains, d+llStringLength(llList2String(replace, c*2))+1, -1);
+                }
+            }
+            c++;
+        }
+
+        //llOwnerSay("Conjugated remainder " + remains);
+
+        d=0;
+        while (d != -1) {
+            d = llSubStringIndex(remains, "+");
+            if (-1 != d) {
+                remains = llDeleteSubString(remains, d, d);
+            }
+            //llOwnerSay((string)d + " - " + remains);
+        }
+
+        //llOwnerSay("Removed + signs " + remains);
+
+        // special case for ending with I (need this?)
+        if (llGetSubString(remains, -3, -1) == " I ") {
+            remains = llGetSubString(remains, 0, llStringLength(remains)-2) + "me ";
+            //llOwnerSay("Fixed I " + remains);
+        }
+        
+        remains = llStringTrim(remains, STRING_TRIM_TAIL);
+    }
+    
+    message="";     // release some memory maybe
+        
+    // now just figure out the reply, using K
+    // find the first reply by looking for the '!'
+    k = llList2Integer(keywords, k*2+1);
+    tmpstr = "";
+    while (tmpstr != "!") {
+        k++;
+        tmpstr = llList2String(data, k);
+    }
+
+    //llOwnerSay("Found replies, offset " + (string)offset);
+    
+    if (k >= bestkey) {
+        return;
+    }
+    bestkey=k;
+    
+    // now, use offset to find the desired reply
+    k++;
+    nFirst = k;
+    c=offset++;
+    while (c > 0) {
+        k++;
+        if (llList2String(data, k) == ".") {
+            offset/=2;  // cut it down
+            k=nFirst;   // wrap around
+        }
+        c--;
+    }
+    // if the last character is '*', then append remains
+    reply = llList2String(data, k);
+    if (llGetSubString(reply, -1, -1) == "*") {
+        reply = llGetSubString(reply, 0, llStringLength(reply)-2) + remains + "?";
+    }
+    //llOwnerSay("+ Selected this one");
+}
+
+default
+{
+    state_entry()
+    {
+        integer i;
+        string s;
+        
+        //llOwnerSay("Loading data...");
+        for (i=0; i<llGetListLength(data); i++) {
+            s = llList2String(data, i);
+            if (s != "!") {
+                keywords += s;
+                keywords += i;
+                //llOwnerSay(s + " - " + (string)i);
+            } else {
+                while (s != ".") {
+                    i++;
+                    s = llList2String(data, i);
+                }
+            }
+        }
+        //llOwnerSay("Got " + (string)(llGetListLength(keywords)/2) + " keywords.");
+        llSetStatus(STATUS_BLOCK_GRAB, TRUE);
+    }
+    
+    touch_start(integer cnt) {
+        key z = llDetectedKey(0);
+        string sz = llDetectedName(0);
+        llSay(0, "Hi " + sz + "! I'm Eliza! Let's talk! What seems to be troubling you? (say BYE to end)");
+        offset=0;
+        previous="";
+        llListenRemove(listener);
+        llSleep(0.1);
+        listener = llListen(0, "", z, "");
+    }
+    
+    listen(integer channel, string name, key id, string message)
+    {
+        integer idx;
+        
+        // release some memory?
+        name="";
+        id=NULL_KEY;
+
+        message = llToUpper(llStringTrim(message, STRING_TRIM));       // make uppercase
+                
+        if (llStringLength(message) > 255) {
+            llSay(0, "Whoa, slow down. Can you speak more slowly?");
+            return;
+        }
+        if (llStringLength(message) < 1) {
+            // nothing said, no reply
+            return;
+        }
+        
+        bestkey=999;
+        
+        list chats = llParseString2List(message, [".",";",","], []);
+        message="";     // available to garbage collect?
+        
+        for (idx=0; idx<llGetListLength(chats); idx++) {
+            //llOwnerSay(" > " + llList2String(chats, idx));
+            parsesentence(llList2String(chats, idx));
+        }
+        
+        // delay a bit before replying
+        llSleep(2.0+llFrand(4.0));
+        llSay(0, reply);
+        //llOwnerSay((string)llGetFreeMemory() + " bytes free");
+    
+    }
+}

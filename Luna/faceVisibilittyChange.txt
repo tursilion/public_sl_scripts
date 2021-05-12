@@ -1,0 +1,81 @@
+// very simple show/hide script
+// Intended to work with mesh for changing state of wings
+// In that case, all the various states of the wings are assumed to be in the same
+// object, and we just toggle faces. We can adapt if needed to different prims, or
+// even messaging to different objects if needed. Starting simple!
+// -Tursi Jackson
+
+// add the indexes of faces that need to be visible in the OPEN state here
+// It's okay to have just one
+list face_open = [ 1, 2];
+
+// add the indexes of faces that need to be visible in the CLOSED state here
+// anything in face_open will be hidden
+list face_closed = [3, 4];
+
+default
+{
+    state_entry()
+    {
+        // by default, we go to state closed
+        // we never stay in default
+        state closed;
+    }
+    
+    on_rez(integer start)
+    {
+        llResetScript();
+    }
+}
+
+
+state closed
+{
+    state_entry() 
+    {
+        // show all the faces in face_closed
+        // hide all the faces in face_open
+        integer idx;
+        
+        for (idx = 0; idx < llGetListLength(face_closed); idx++) {
+            llSetLinkAlpha(0, 1.0, llList2Integer(face_closed, idx));
+        }
+        for (idx = 0; idx < llGetListLength(face_open); idx++) {
+            llSetLinkAlpha(0, 0.0, llList2Integer(face_open, idx));
+        }
+    }
+    
+    touch_start(integer num)
+    {
+        // eventually we want something more deliberate, like a menu or HUD
+        if (llGetOwnerKey(llDetectedKey(0)) == llGetOwner()) {
+            state open;
+        }
+    }
+}
+            
+state open
+{
+    state_entry() 
+    {
+        // show all the faces in face_open
+        // hide all the faces in face_closed
+        integer idx;
+        
+        for (idx = 0; idx < llGetListLength(face_open); idx++) {
+            llSetLinkAlpha(0, 1.0, llList2Integer(face_open, idx));
+        }
+        for (idx = 0; idx < llGetListLength(face_closed); idx++) {
+            llSetLinkAlpha(0, 0.0, llList2Integer(face_closed, idx));
+        }
+    }
+    
+    touch_start(integer num)
+    {
+        // eventually we want something more deliberate, like a menu or HUD
+        if (llGetOwnerKey(llDetectedKey(0)) == llGetOwner()) {
+            state closed;
+        }
+    }
+}
+

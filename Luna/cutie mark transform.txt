@@ -1,0 +1,172 @@
+// Comms based on Curly's script, massively updated by Tursi
+// triggered by eye derp!
+
+integer HUD_CHANNEL = -841511254;       // channel for HUD communications
+string UPDATE_EYES_COMMAND = "update eyes";
+
+string nmmCutie = "ea3044b2-76bb-d2ec-8d90-0334af5fc4f6";
+string lunaCutie = "909ca5cf-87a7-33e6-1b31-f20e6fe1171b";
+vector nmmOutline = <0.0745, 0.15294, 0.42352>;
+vector lunaOutline = <0.00784, 0.02745, 0.145098>;
+
+float nChangeTimer = 0.1;
+float nDistance = 0.0;
+integer nMode = 0;      // 0 - luna, 1-nmm
+
+// Convert a key to an integer using the first 8 hex digits (32 bits)
+integer key2integer(key k) {
+    return (integer)("0x" + llGetSubString((string)k, 0, 7));
+}
+
+integer channel() {
+    return HUD_CHANNEL ^ key2integer(llGetOwner());
+}
+
+changeTexfast(integer idx, string newtex) {
+    list tempo = llGetLinkPrimitiveParams(idx, [PRIM_TEXTURE, ALL_SIDES]);
+    integer k = (tempo != []); // llGetListLength(tempo) for the purists
+    integer s = k / 4; // That's your number of sides
+    for (; s > 0; --s)
+    {
+        k -= 4; // Replace each texture key by what we need to set it
+        tempo = llListReplaceList(tempo, [PRIM_TEXTURE, s - 1, newtex], k, k);
+    }
+    llSetLinkPrimitiveParamsFast(idx, tempo);
+}
+
+// luna state
+default
+{
+    state_entry()
+    {
+        // default to Luna
+        nMode = 0;
+        changeTexfast(1, lunaCutie);
+        llSetLinkPrimitiveParamsFast(2, [PRIM_COLOR, ALL_SIDES, lunaOutline, 1.0]);
+        llListen(channel(), "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) {
+        if (llGetOwnerKey(id) != llGetOwner()) return;
+            
+        list parsed  = llParseString2List(msg, [";"], []);
+        string command = llList2String(parsed, 0);
+        
+        //llOwnerSay("Got command: " + (string)parsed);
+
+        if (command == UPDATE_EYES_COMMAND) {
+            integer i;
+            for (i = 1; i < llGetListLength(parsed); i+=2) {
+                string param = llList2String(parsed, i);
+                float  value = (float)llList2String(parsed, i+1);
+                if (param == "derprange") {
+                    if (value > 0.75) {
+                        state goNightmare;
+                    }
+                }
+            }
+            return;
+        }
+    }
+}
+
+state goNightmare
+{
+    state_entry()
+    {
+        llSetTimerEvent(nChangeTimer);
+        nDistance = 0.0;
+    }
+    
+    timer() 
+    {
+        nDistance+=0.01;
+        if (nDistance >= 1.0) {
+            // done, complete transition
+            state Nightmare;
+        } else if (nDistance > 0.5) {
+            if (nMode == 0) {
+                nMode = 1;
+                // switch to NMM cutie mark
+                changeTexfast(1, nmmCutie);
+            }
+            // fading the cutie mark back in by going 0.0-1.0
+            float fade=(nDistance-0.5)*2.0;
+//            llSetLinkPrimitiveParamsFast(1, [PRIM_COLOR, ALL_SIDES, <fade,fade,fade>, 1.0]);
+            llSetLinkPrimitiveParamsFast(1, [PRIM_GLOW, ALL_SIDES, 1.0-fade]);
+        } else {
+            // fade the cutie mark out by going black (1.0-0.0)
+            float fade=1.0-(nDistance*2.0);
+//            llSetLinkPrimitiveParamsFast(1, [PRIM_COLOR, ALL_SIDES, <fade,fade,fade>, 1.0]);
+            llSetLinkPrimitiveParamsFast(1, [PRIM_GLOW, ALL_SIDES, 1.0-fade]);
+        }
+    }
+}
+
+state Nightmare
+{
+    state_entry()
+    {
+        // Enforce, should already be set
+        nMode = 1;
+        changeTexfast(1, nmmCutie);
+        llSetLinkPrimitiveParamsFast(2, [PRIM_COLOR, ALL_SIDES, nmmOutline, 1.0]);
+        llListen(channel(), "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) {
+        if (llGetOwnerKey(id) != llGetOwner()) return;
+            
+        list parsed  = llParseString2List(msg, [";"], []);
+        string command = llList2String(parsed, 0);
+        
+        //llOwnerSay("Got command: " + (string)parsed);
+
+        if (command == UPDATE_EYES_COMMAND) {
+            integer i;
+            for (i = 1; i < llGetListLength(parsed); i+=2) {
+                string param = llList2String(parsed, i);
+                float  value = (float)llList2String(parsed, i+1);
+                if (param == "derprange") {
+                    if (value < 0.55) {
+                        state goLuna;
+                    }
+                }
+            }
+            return;
+        }
+    }
+}    
+
+state goLuna
+{
+    state_entry()
+    {
+        llSetTimerEvent(nChangeTimer);
+        nDistance = 1.0;
+    }
+    
+    timer() 
+    {
+        nDistance-=0.01;
+        if (nDistance <= 0.0) {
+            // done, complete transition
+            state default;
+        } else if (nDistance >= 0.5) {
+            // fading the cutie mark back in by going 0.0-1.0
+            float fade=(nDistance-0.5)*2.0;
+//            llSetLinkPrimitiveParamsFast(1, [PRIM_COLOR, ALL_SIDES, <fade,fade,fade>, 1.0]);
+            llSetLinkPrimitiveParamsFast(1, [PRIM_GLOW, ALL_SIDES, 1.0-fade]);
+        } else {
+            if (nMode == 1) {
+                nMode = 0;
+                // switch to Luna cutie mark
+                changeTexfast(1, lunaCutie);
+            }
+            // fade the cutie mark out by going black (1.0-0.0)
+            float fade=1.0-(nDistance*2.0);
+//            llSetLinkPrimitiveParamsFast(1, [PRIM_COLOR, ALL_SIDES, <fade,fade,fade>, 1.0]);
+            llSetLinkPrimitiveParamsFast(1, [PRIM_GLOW, ALL_SIDES, 1.0-fade]);
+        }
+    }
+}

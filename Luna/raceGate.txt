@@ -1,0 +1,324 @@
+// Racing gate script by Tursi Jackson
+// timing may fail at SL midnight (every 4 hrs) or if the sun is locked (numbers may get too large)
+
+integer active = 0;     // this gate is waiting to be reached
+integer racing = 0;     // gate0 - a race is in progress
+key racer = NULL_KEY;   // current racer key
+// high score table (time in seconds, name, date)
+list top10 = [
+ 11700,  "Princess Celestia (Aurkae Rhiannyr)"     ,"2014-02-27",
+ 13000,  "Cloudy Skies (Charlie Sapeur)"           ,"2014-03-01",
+ 13870,  "Spitfire (SpitfireCW Resident)"          ,"2014-03-26",
+ 14900,  "Pinkie Pie (RinkiePie Resident)"         ,"2014-02-21",
+ 15300,  "Silver Cloud (ExpeditiousPony Resident)" ,"2014-02-20",
+ 15400,  "Shadow Bolt (Gehn Shadowcry)"            ,"2014-02-20",
+ 16400,  "Skye Wishbringer (Skye Wishbringer)"     ,"2014-02-24",
+ 16400,  "OldVamp (OldVamp Resident)"              ,"2014-03-01",
+ 16900,  "Rainbow Dash (Cera Cyannis)"             ,"2014-02-24",
+ 20800,  "Treasure (Enkai Mukerji)"                ,"2014-02-20"
+// ,50000,  "Tank", "2014-02-20"
+];
+
+integer gate = -1;      // this gate number (0-??)
+integer islast = 0;     // this is the last gate
+list msglist = [];      // saved data
+
+// channel for internal gate communication
+integer GATE_CHANNEL = -3044;
+
+// number of places preserved
+integer FIXEDPOINT = 1000;
+integer DISPLAYPLACES = 2;
+
+integer round(float num) {
+    // handle rounding to a fixed point integer value (positive only)
+    integer i = (integer)(num*FIXEDPOINT+0.5);
+    return i;
+}
+
+string Fixed2String(integer num) { 
+    // allows string output of a fixed in a tidy text format
+    // outputs DISPLAYPLACES decimal places
+    integer intpart = num / FIXEDPOINT;
+    integer fracpart = num - (intpart*FIXEDPOINT);
+    string s = "000000000" + (string)fracpart;
+    return (string)intpart + "." + llGetSubString(s, -DISPLAYPLACES-1, -2);
+}
+
+reportscore(list lst) {
+    integer place=llList2Integer(lst,2);
+    if (place > 0) {
+        llSay(0, username(racer) + " got a new best time! #" + (string)place + "!");
+    } else if (place < 0) {
+        llSay(0, username(racer) + " did not beat their current best time of " + (string)Fixed2String(llList2Integer(lst,3)));
+    }
+}
+
+resetrace() {
+    if (gate == 0) {
+        llRegionSay(GATE_CHANNEL, "0 reset 0 . . . . .");
+    }
+    deactivate();
+    active=0;
+    racing=0;
+    racer=NULL_KEY;
+    llSetTimerEvent(0.0);
+    llCollisionFilter("", NULL_KEY, TRUE);      // filter out all collisions to reduce script time
+}
+
+showhighscores(key who) {
+    integer idx;
+    string out;
+    string finalout;
+
+    finalout = "\nLuna's Speed Run - Top 10\n========================\n";
+    for (idx=0; idx<10; idx++) {
+        out = Fixed2String(llList2Integer(top10, idx*3));
+        while (llStringLength(out) < 5) out = " " + out;    // leading spaces
+        out = out + "  " + llList2String(top10, idx*3+1);
+        if (llStringLength(out) > 46) out=llGetSubString(out, 0, 45);
+        while (llStringLength(out) < 47) out = out + " ";   // trailing spaces
+        out = out + llList2String(top10, idx*3+2);
+        finalout += out + "\n";
+    } 
+    if (gate==0) {
+        if (racing == 0) {
+            finalout += "Say 'race' to start.\n";
+        } else {
+            finalout += llGetDisplayName(racer) + " is currently racing, please wait.\n";
+        }
+    }
+    llInstantMessage(who, finalout);
+}
+
+activate() 
+{
+    llSetLinkPrimitiveParamsFast(LINK_THIS, [PRIM_GLOW, ALL_SIDES, 0.2]);
+    llSetAlpha(0.2, ALL_SIDES);
+}
+
+deactivate()
+{
+    llSetLinkPrimitiveParamsFast(LINK_THIS, [PRIM_GLOW, ALL_SIDES, 0.0]);
+    llSetAlpha(0.0, ALL_SIDES);
+}
+
+string username(key id) 
+{
+    return llGetDisplayName(id) + " (" + llKey2Name(id) + ")";
+}
+
+default
+{
+    state_entry()
+    {
+        // description should be empty or contain 'finish' if it's the last gate
+        string tmp = llGetObjectDesc();
+        if (tmp == "finish") {
+            islast = 1;
+        } else {
+            islast = 0;
+        }
+        tmp = llGetObjectName();
+        if (tmp == "(Waiting)") {
+            llSleep(0.5);       // don't spin on busy server
+            llResetScript();    // server problem?
+        }
+        // last word in the name needs to be the gate number
+        list tmp2 = llParseString2List(tmp, [" "], []);
+        integer len = llGetListLength(tmp2);
+        if (len > 0) {
+            gate = (integer)llList2String(tmp2, len-1); // it's a string, so cast it per docs
+        }
+        
+        // enable collision detection
+        llVolumeDetect(TRUE);
+        llCollisionFilter("", NULL_KEY, TRUE);      // filter out all collisions to reduce script time
+        
+        if (gate != -1) {
+            if (gate == 0) {
+                llListen(0, "", NULL_KEY, "");      // listen for start command
+            }
+            llListen(GATE_CHANNEL, "", NULL_KEY, "");   // listen for gate chatter
+            
+            if (islast) {
+                llSay(0, "Initialized finish gate " + (string)gate);
+            } else {
+                llSay(0, "Initialized gate " + (string)gate);
+            }                
+        } else {
+            llSay(0, "Gate initialization error - check name ends in the gate number");
+        }
+    }
+
+    touch_start(integer total_number)
+    {
+        // host can touch gate 0 to cancel race
+        // anyone else can touch gate 0 for status
+        // other gates ignore touch
+        if (gate == 0) {
+            if ((racing)&&(llDetectedKey(0) == racer)) {
+                llInstantMessage(racer, "Your race has been cancelled.");
+                resetrace();
+            } else {
+                showhighscores(llDetectedKey(0));
+            }
+        }
+    }
+    
+    listen(integer channel, string name, key id, string msg) 
+    {
+        if ((gate == 0) && (channel == 0) && (msg == "race")) {
+            if (racing != 0) {
+                llInstantMessage(id, "Can not start a race, " + llGetDisplayName(racer) + " is racing.");
+            } else {
+                if (active != 0) {
+                    llInstantMessage(id, "The race gate is already ready - time will start when you pass through it.");
+                } else {
+                    // handle RP tools
+                    if (ZERO_VECTOR == llGetAgentSize(id)) {
+                        id = llGetOwnerKey(id);
+                    }
+                    if (ZERO_VECTOR == llGetAgentSize(id)) {
+                        llWhisper(0, "Unable to identify race requestor - try removing any RP tools.");
+                    } else {
+                        resetrace();
+                        llRegionSay(GATE_CHANNEL, "0 reset " + (string)id + " . . . . .");
+                        active=1;
+                        racing=1;
+                        racer=id;
+                        llCollisionFilter("", racer, TRUE);
+                        activate();
+                        llInstantMessage(id, "The system is ready for you - time will start when you pass through the first gate.");
+                        llSetTimerEvent(60.0);      // 60 seconds to reset 
+                    }
+                }
+            }
+        }
+        
+        if (channel == GATE_CHANNEL) {
+            list lst=llParseString2List(msg, [" "], []);
+            if (llGetListLength(lst) == 8) {
+                // right size at least
+                integer from = llList2Integer(lst, 0);
+                if ((from == 0) && (llList2String(lst, 1) == "reset")) {
+                    resetrace();
+                    key tmp = llList2Key(lst, 2);
+                    if (tmp != NULL_KEY) {
+                        racer = tmp;
+                        llCollisionFilter("", racer, TRUE); 
+                    }
+                } else if (llList2String(lst, 1) == "timeout") {
+                    if ((active)||(racing)) resetrace();
+                } else if (llList2String(lst, 1) == "highscore") {
+                    if (islast) {
+                        reportscore(lst);
+                    }
+                } else if (from == -1) {
+                    if (gate == 0) {
+                        // this is a race complete message
+                        integer total = llList2Integer(lst, 3);
+                        // we just need to see if a new high score was set
+                        integer scoreout=0;
+                        integer idx;
+                        integer timeout=total;
+                        for (idx = 0; idx<10; idx++) {
+                            if (total < llList2Integer(top10, idx*3)) {
+                                // this is it
+                                list new = [ total, username(racer), llGetDate() ];
+                                top10 = llListInsertList(top10, new, idx*3);
+                                scoreout=idx+1;
+                                // now check if we were already in the list at a lower position
+                                integer i2;
+                                for (i2=idx+1; i2<10; i2++) {
+                                    if (llList2String(top10, i2*3+1) == username(racer)) {
+                                        // this is a match, nuke it
+                                        top10=llDeleteSubList(top10, i2*3, i2*3+2);
+                                        i2=10;
+                                    }
+                                }
+                                // and if we didn't delete one, bump the last guy off
+                                if (llGetListLength(top10) > 10*3) {
+                                    top10 = llDeleteSubList(top10, -3, -1);
+                                }
+                                idx=10;
+                            } else if (llList2String(top10, idx*3+1) == username(racer)) {
+                                // already in the list, and did not beat that time, so stop
+                                timeout=llList2Integer(top10,idx*3);
+                                idx=10;
+                                scoreout=-1;
+                            }
+                        }
+                        msglist=[gate, "highscore", scoreout, timeout, total, 0, 0, 0];
+                        if (total > 999*FIXEDPOINT) {
+                            llSay(0, "Sorry! " + username(racer) + "'s time was invalidated due to a sim time error!");
+                        } else {
+                            llSay(0, "Finished! " + username(racer) + "'s total time = " + Fixed2String(total) + " seconds!");
+                        }
+                        reportscore(msglist);
+                        llRegionSay(GATE_CHANNEL, llDumpList2String(msglist," "));
+                        resetrace();
+                    }
+                } else if (from == gate-1) {
+                    // last gate, so wake up and get ready
+                    msglist = lst;       // save data for relay
+                    active = 1;
+                    llSetTimerEvent(60.0);  // timeout
+                    activate();
+                }
+            }
+        }
+    }
+    
+    timer() 
+    {
+        // timeout occurred - just shut down
+        llSay(0, "Gate timed out.");
+        llRegionSay(GATE_CHANNEL, (string)gate + " timeout . . . . . .");
+        resetrace();
+    }
+    
+    collision_start(integer num) 
+    {
+        if (active) {
+            // should only be the avatar in question, but we'll make sure
+            integer idx;
+            for (idx=0; idx<num; idx++) {
+                key id = llDetectedKey(idx);
+                if (id == racer) {
+                    // we got him!
+                    float starttime = llGetTimeOfDay();
+                    float endtime = starttime;
+                    if (gate == 0) {
+                        msglist = [ gate, starttime, endtime, 0,0,0,0,0 ];
+                    } else {
+                        list tmp;
+                        if (islast) {
+                            float starttime = llList2Float(msglist, 1);
+                            integer total = round(endtime - starttime);
+                            if (total < 0) {
+                                // clock must have wrapped - is that possible?
+                                total = 1000*FIXEDPOINT;
+                                llSay(0, "Sorry! Your time was invalidated due to a sim time error!");
+                                endtime = starttime + total;
+                            } else {
+                                llSay(0, "Finished! Total time = " + Fixed2String(total) + " seconds!");
+                            }
+                            tmp = [ -1, starttime, endtime, total ];
+                            msglist = llListReplaceList(msglist, tmp, 0, 3);
+                        } else {
+                            msglist = llListReplaceList(msglist, [gate], 0, 0);
+                            msglist = llListReplaceList(msglist, [endtime], 2, 2);
+                        }                            
+                    }
+                    deactivate();
+                    active=0;
+                    llSetTimerEvent(0.0);
+                    
+                    llRegionSay(GATE_CHANNEL, llDumpList2String(msglist," "));
+                    idx=num;
+                }
+            }
+        }
+    }
+}

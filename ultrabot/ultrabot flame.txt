@@ -1,0 +1,73 @@
+// Tursi's Ultrabot flame script
+// For Kale
+
+// Modes (must match listener scripts):
+integer modeSleep=0;    // no activity, eyes grey
+integer modeStop=1;     // awake, but idle. Will sleep if no commands for set time, blue eyes
+integer modePlay=2;     // bounces around semi-randomly, green eyes
+integer modeHeel=3;     // follows the speaker (owner can override)
+integer modeFlame=4;    // Helper for the jets to increase flame, will set back after
+
+setParticlesLow()
+{
+    llParticleSystem([
+        PSYS_PART_FLAGS,            PSYS_PART_INTERP_COLOR_MASK|PSYS_PART_INTERP_SCALE_MASK,
+        PSYS_SRC_PATTERN,           PSYS_SRC_PATTERN_ANGLE_CONE,
+        PSYS_PART_START_COLOR,      <1.0, 0.7, 0.0>,
+        PSYS_PART_END_COLOR,        <0.5, 0.1, 0.0>,
+        PSYS_PART_START_ALPHA,      1.0,
+        PSYS_PART_END_ALPHA,        0.1,
+        PSYS_PART_START_SCALE,      <0.9, 0.9, 0.9>,
+        PSYS_PART_END_SCALE,        <0.01, 0.01, 0.01>,    
+        PSYS_PART_MAX_AGE,          0.1,
+        PSYS_SRC_BURST_RATE,        0.01,
+        PSYS_SRC_BURST_PART_COUNT,  10,      
+        PSYS_SRC_BURST_RADIUS,      0.1,
+        PSYS_SRC_BURST_SPEED_MIN,   8.0,
+        PSYS_SRC_BURST_SPEED_MAX,   8.0, 
+        PSYS_SRC_ANGLE_BEGIN,       PI,
+        PSYS_SRC_ANGLE_END,         PI
+        ]);
+}
+ 
+setParticlesHigh() {
+    llParticleSystem([
+        PSYS_PART_FLAGS,            PSYS_PART_INTERP_COLOR_MASK|PSYS_PART_INTERP_SCALE_MASK,
+        PSYS_SRC_PATTERN,           PSYS_SRC_PATTERN_ANGLE_CONE,
+        PSYS_PART_START_COLOR,      <1.0, 0.7, 0.0>,
+        PSYS_PART_END_COLOR,        <0.1, 0.0, 0.0>,
+        PSYS_PART_START_ALPHA,      1.0,
+        PSYS_PART_END_ALPHA,        0.1,
+        PSYS_PART_START_SCALE,      <0.7, 0.7, 0.7>,
+        PSYS_PART_END_SCALE,        <0.01, 0.01, 0.01>,    
+        PSYS_PART_MAX_AGE,          0.2,
+        PSYS_SRC_BURST_RATE,        0.01,
+        PSYS_SRC_BURST_PART_COUNT,  10,      
+        PSYS_SRC_BURST_RADIUS,      0.1,
+        PSYS_SRC_BURST_SPEED_MIN,   8.0,
+        PSYS_SRC_BURST_SPEED_MAX,   8.0, 
+        PSYS_SRC_ANGLE_BEGIN,       PI,
+        PSYS_SRC_ANGLE_END,         PI
+        ]);
+}
+
+default
+{
+    state_entry()
+    {
+        llParticleSystem([]); 
+    }
+
+    link_message(integer from, integer int, string str, key id) {
+        if (int == modeSleep) {
+            llParticleSystem([]);
+        }
+        if ((int == modePlay) || (int == modeHeel) || (int == modeStop)) {
+            setParticlesLow();
+        }
+        if (int == modeFlame) {
+            setParticlesHigh();
+        }
+    }
+}
+

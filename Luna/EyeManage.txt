@@ -1,0 +1,265 @@
+// Based on Curly's script, massively updated by Tursi Jackson for Luna ^^
+// This script is compatible with Curly's Brony HUD 1.0
+// This is my distribution version - dist open source since Curly was cool
+// open to open source his scripts and make all the mods I've done to mine
+// possible! 
+
+// Supported HUD options:
+// Blink State (three positions)
+// Automatic blink on/off
+// Expressions: normal, shocked, sad, angry, and puffed cheeks
+
+// Touch support added for ponies without the HUD
+// Since the channel is hard to predict, this is the easiest interface :)
+
+// bugs:
+// puffed cheeks are not compatible with other modes today.
+// Code in place for blush but nothing is done with it.
+
+integer HUD_CHANNEL = -841511254;       // channel for HUD communications
+string BLINK_STATE_INCREMENT_COMMAND = "blink state increment";
+string BLINK_ENABLE_COMMAND = "blink enable";
+
+string UPDATE_EXPRESSION_COMMAND = "update expression";
+string EXPRESSION_NEUTRAL = "neutral";
+string EXPRESSION_WIDEEYED = "wide";
+string EXPRESSION_SAD = "sad";
+string EXPRESSION_ANGRY = "angry";
+string EXPRESSION_CHEEKS = "cheeks";
+string EXPRESSION_BLUSH = "blush";
+
+string texture;
+
+// these are CELESTIA's eyes
+list eyeblink = [ "f70c4e97-a6a9-3778-3918-c3bd9e894610",
+                  "778886c8-3e67-514f-040f-9b73b4d49840",
+                  "38eac9e5-f063-bcf4-43b8-b4a6c7486194",
+                  "778886c8-3e67-514f-040f-9b73b4d49840"
+                ];
+string eyecheeks = "4dac9b57-dfe6-5bf2-1ac3-59984dba329a";
+string eyeangry = "55bab7b2-c200-1462-2e19-fbc46669d93c";
+string eyesad = "db03f2b1-a493-403d-3c94-76e994f381a5";
+string eyewide = "c568883d-65d8-70ac-d80a-fdf7b65644ca";
+
+integer eyestate = -1;      // -1 = waiting, 0,1,2,3 = animation frame
+integer min_eyestate = 0;    // what state is 'open'? 0-2
+integer blink_active = 1;    // whether blinking is active
+integer was_blinking = blink_active;    // whether we stopped blinking for a temp mode
+
+// These functions talk to Curly's HUD
+// Convert a key to an integer using the first 8 hex digits (32 bits)
+integer key2integer(key k) {
+    return (integer)("0x" + llGetSubString((string)k, 0, 7));
+}
+
+integer channel() {
+    return HUD_CHANNEL ^ key2integer(llGetOwner());
+}
+
+// Back to Tursi code
+integer blinktime() {
+    return (integer)llFrand(50.0)+10;
+}
+
+// this function off the forums is probably overkill...
+changeTexfast(string newtex) {
+    integer idx=6;      // link number for eyes, manually worked out
+    list tempo = llGetLinkPrimitiveParams(idx, [PRIM_TEXTURE, ALL_SIDES]);
+    integer k = (tempo != []); // llGetListLength(tempo) for the purists
+    integer s = k / 4; // That's your number of sides
+    for (; s > 0; --s)
+    {
+        k -= 4; // Replace each texture key by what we need to set it
+        tempo = llListReplaceList(tempo, [PRIM_TEXTURE, s - 1, newtex], k, k);
+    }
+    llSetLinkPrimitiveParamsFast(idx, tempo);
+}
+
+blinkoff() {
+    llSetTimerEvent(0.0);
+    min_eyestate=0;
+    eyestate = -1;
+    changeTexfast(llList2String(eyeblink, 0));
+}
+
+blinkon() {
+    min_eyestate=0;
+    eyestate = 0;
+    llSetTimerEvent(0.1);
+}
+
+integer parseexpression(string mode) {
+    if (mode == EXPRESSION_NEUTRAL) {
+        // reset to default mode
+        if (was_blinking) {
+            blinkon();
+        } else {
+            blinkoff();
+        }
+        return 1;
+    } else if (mode == EXPRESSION_WIDEEYED) {
+        // OMG!
+        blinkoff();
+        changeTexfast(eyewide);
+        return 1;
+    } else if (mode == EXPRESSION_SAD) {
+        // awwww....
+        // todo: need to remove some eyelashes
+        blinkoff();
+        changeTexfast(eyesad);
+        return 1;
+    } else if (mode == EXPRESSION_ANGRY) {
+        // grrrrr!
+        blinkoff();
+        changeTexfast(eyeangry);
+        return 1;
+    } else if (mode == EXPRESSION_CHEEKS) {
+        // this may be distinct some day
+        // giggle!
+        blinkoff();
+        changeTexfast(eyecheeks);
+        return 1;
+    } else if (mode == EXPRESSION_BLUSH) {
+        // this is not yet implemented
+        return 1;
+    }
+    return 0;
+}   
+
+addeyestate(integer step) {
+    min_eyestate += step;
+    if (min_eyestate < 0) min_eyestate = 0;
+    if (min_eyestate > 2) min_eyestate = 2;
+    eyestate = -1;
+    llSetTimerEvent(0.1);
+}    
+
+default {
+    on_rez (integer param) {
+        llResetScript();
+    }
+
+    state_entry() {
+        llListen(channel(), "", NULL_KEY, "");
+        was_blinking = blink_active;
+        blinkon();
+    }
+    
+    listen(integer channel, string name, key id, string msg) {
+        if (llGetOwnerKey(id) != llGetOwner()) return;
+            
+        list parsed  = llParseString2List(msg, [";"], []);
+        string command = llList2String(parsed, 0);
+        
+        //llOwnerSay("Got command: " + (string)parsed);
+
+        if (command == BLINK_STATE_INCREMENT_COMMAND) {
+            integer step = (integer)llList2String(parsed, 1);
+            addeyestate(step);
+            return;
+        }
+        
+        if (command == BLINK_ENABLE_COMMAND) {
+            integer val = (integer)llList2String(parsed, 1);
+            if (val == 0) {
+                blinkoff();
+            } else {
+                blinkon();
+            }
+            was_blinking = val;
+            return;
+        }
+        
+        if (command == UPDATE_EXPRESSION_COMMAND) {
+            string mode = llList2String(parsed, 1);
+            parseexpression(mode);
+            if (mode == EXPRESSION_NEUTRAL) {
+                // reset to default mode
+                if (was_blinking) {
+                    blinkon();
+                } else {
+                    blinkoff();
+                }
+            } else if (mode == EXPRESSION_WIDEEYED) {
+                // OMG!
+                blinkoff();
+                changeTexfast(eyewide);
+            } else if (mode == EXPRESSION_SAD) {
+                // awwww....
+                // todo: need to remove some eyelashes
+                blinkoff();
+                changeTexfast(eyesad);
+            } else if (mode == EXPRESSION_ANGRY) {
+                // grrrrr!
+                blinkoff();
+                changeTexfast(eyeangry);
+            } else if (mode == EXPRESSION_CHEEKS) {
+                // this may be distinct some day
+                // giggle!
+                blinkoff();
+                changeTexfast(eyecheeks);
+            } else if (mode == EXPRESSION_BLUSH) {
+                // this is not yet implemented
+            }
+            return;
+        }
+        
+        // maybe it's a raw command
+        if (parseexpression(msg)) {
+            return;
+        }
+        if (msg == "blink off") {
+            blinkoff();
+            was_blinking = 0;
+            return;
+        }
+        if (msg == "blink on") {
+            blinkon();
+            was_blinking = 1;
+            return;
+        }
+        if (msg == "close eyes") {
+            min_eyestate=2;
+            eyestate=-1;
+            llSetTimerEvent(0.1);
+            return;
+        }
+        if (msg == "open eyes") {
+            min_eyestate=0;
+            eyestate=-1;
+            llSetTimerEvent(0.1);
+            return;
+        }
+    }
+    
+    timer() 
+    {
+        if (eyestate == -1) {
+            llSetTexture(llList2String(eyeblink,min_eyestate), ALL_SIDES);
+            eyestate = min_eyestate;
+            if ((min_eyestate == 0) && (blink_active == 1)) {
+                // new random time
+                llSetTimerEvent(blinktime());
+            } else {
+                llSetTimerEvent(0.0);
+            }
+        } else {
+            changeTexfast(llList2String(eyeblink, eyestate));
+            llSetTimerEvent(0.1);       // next frame
+            eyestate=eyestate+1;
+            if (eyestate >= 4) {
+                eyestate=-1;
+            }
+        }
+    }
+    
+    touch_start(integer num) {
+        if (llDetectedKey(0) != llGetOwner()) return;
+        
+        // just launch a menu on the channel
+        llDialog(llDetectedKey(0), "Princess Mesh - Select Expression",
+            [ "blink off", "blink on", "close eyes", "open eyes",
+            EXPRESSION_NEUTRAL, EXPRESSION_WIDEEYED, EXPRESSION_SAD,
+            EXPRESSION_ANGRY, EXPRESSION_CHEEKS ], channel() );
+    }
+}    

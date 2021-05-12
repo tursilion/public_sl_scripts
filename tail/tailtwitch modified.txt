@@ -1,0 +1,239 @@
+// Argent Stonecutter's Safe Tailtwitch Script
+
+// (inspired by Whinge's twitch, but without the potential for long-term
+//  rotational drift from round-off error, and more randomness, and comments)
+// Modified by Tursi for touch commands and others
+
+// commands:
+//    /2 tail on   -- turn on twitching
+//    /2 tail off  -- turn off twitching
+//    /2 tail report- report current rotation (see below)
+//    /2 tail reset - reset to default rotation (see below)
+//
+// To install on a new avatar - turn twitching off first.
+// Set up your tail with a sphere at the end as the primary prim
+// Position the tail on your body correctly, and issue /2 tail report
+// Take the vector reported into chat, and fill in the 'rotation reset' value below
+// Now save and you are done. Reset is only needed if you interrupt the script
+// in certain ways anyway.
+
+// how twitchy are we today, changed every time you attach...
+float twitchiness;
+
+// are we twitching?
+integer twitching;
+
+// are we listening?
+integer handler;
+
+//Who's that?
+string last_toucher;
+
+// listen where?
+integer channel=2;
+
+// time between movements in a twitch
+// lions move slow ;)
+float delay = 0.4;
+// variable - delay can be 1 to delayvar times actual, rndly
+integer delayvar = 3;
+
+// for the messages
+string sLast = "";
+integer cnt = 0;
+
+// for reset
+integer NeedReset = 0;
+integer NeedReport = 0;
+rotation reset=<-0.19456, 0.66826, -0.24858, 0.67363>;
+    
+
+// twitch off twitch on... the twitcher
+twitcher(integer onoff)
+{
+    if(onoff != -1) {
+        twitching = onoff;
+    }
+    if (NeedReport) {
+        rotation rot = llGetLocalRot();
+        llOwnerSay("Tail rotation: " + (string)rot);
+        NeedReport=0;
+    }
+
+    if (NeedReset) {
+        // force the rotation value to hard-coded default
+        llOwnerSay("Resetting position.");
+        llSetLocalRot(reset);
+        NeedReset=0;
+    }
+        
+    // next twitch is twitch rate +/- up to 50
+    llSetTimerEvent(twitching * twitchiness * (0.5+llFrand(1)));
+}
+
+// how twitchy are we?
+twitchy()
+{
+    // every time you attach, change the twitch rate... 
+    twitchiness = llFrand(2) + 2;
+}
+
+// heavy lifting
+twitch()
+{
+    // twitches left/right up to ? degrees
+//    float leftright = (llFrand(PI/30) - (PI/60)) );
+    float leftright = (llFrand(PI/30) - (PI/60)) * (10);
+    // twitches up/down up to ? degrees. 
+    // the more twitchie,r the smaller the twitch.
+//    float up = (llFrand(PI/30 * twitchiness / 5) + (PI/60)) ;
+    float updown = (llFrand(PI/30 * twitchiness / 5) + (PI/60)) ;
+
+    rotation rot = llGetLocalRot();
+    rotation delta1 = <0,updown,leftright,0>;
+    rotation delta2 = <0,updown,-leftright,0>;
+
+    // do we lose out if we derez in the middle?
+    // yes we do...
+
+    // twitch the first
+    llSetLocalRot(rot+delta1);
+    llSleep(delay*(llFrand(delayvar)+1));
+    // back to center
+    llSetLocalRot(rot);
+    llSleep(delay*(llFrand(delayvar)+1));
+    // twitch the second
+    llSetLocalRot(rot+delta2);
+    llSleep(delay*(llFrand(delayvar)+1));
+    // back to center
+    llSetLocalRot(rot);
+    twitcher(-1); // nap
+}
+
+
+check_control()
+{
+  if(!llGetAttached()) return;
+  if(!(llGetPermissions() & PERMISSION_TAKE_CONTROLS))
+  {
+    llRequestPermissions(llGetOwner(), PERMISSION_TAKE_CONTROLS);
+    return;
+  }
+  llTakeControls(CONTROL_LEFT|CONTROL_RIGHT,TRUE,TRUE);
+}
+default
+{
+    state_entry()
+    {
+        twitchy();   // how twitchy are we?
+        twitcher(-1); // set us up the twitch
+        
+        if(!handler) llListenRemove(handler);
+        handler = llListen(channel, "", llGetOwner(), "");
+        llOwnerSay("Command: /" + (string)channel + "tail [on/off/reset/report]");
+
+        check_control();
+    }
+    
+    on_rez(integer p)
+    {
+        twitchy();   // every time you attach, change the twitch rate
+        twitcher(-1); // poke the timer
+
+        if(!handler) llListenRemove(handler);
+        handler = llListen(channel, "", llGetOwner(), "");
+        llOwnerSay("Command: /" + (string)channel + "tail [on/off/reset/report]");
+        check_control();
+    }
+
+    listen(integer channel, string name, key id, string msg)
+    {
+        list l = llParseString2List(llToLower(msg), [" "], []);
+        string cmd = llList2String(l, 0);
+        if(cmd == "tail") // is this for us?
+        {
+            if (llList2String(l, 1) == "reset") {
+                // reset to fixed position
+                NeedReset=1;
+                if (twitching == 0) {
+                    twitcher(0);
+                } else {
+                    llOwnerSay("Will reset...");
+                }
+            } else if (llList2String(l, 1) == "report") {
+                // report the actual rotation values when idle
+                NeedReport=1;
+                if (twitching == 0) {
+                    twitcher(0);
+                } else {
+                    llOwnerSay("Will report...");
+                }
+            } else if (llList2String(l, 1) == "off") {
+                llOwnerSay("TailTwitch off");
+                twitcher(0);
+            } else {
+                llOwnerSay("TailTwitch on");
+                twitchy();   // how twitchy are we?
+                twitcher(1); // set us up the twitch
+            }   
+        }
+    }
+
+    run_time_permissions(integer perm)
+    {
+        if(perm & PERMISSION_TAKE_CONTROLS)
+          check_control();
+    }
+    
+    timer()
+    {
+        twitch();
+    }
+    
+    touch_start(integer total_number)
+    {
+        integer x = (integer)llFrand(5);
+        string s = llDetectedName(0);
+        
+        if (llDetectedKey(0) == llGetOwner()) {
+            llDialog(llGetOwner(), "Set tail action", ["tail on", "tail off", "tail report", "tail reset"], 2);
+        } else {
+            if (s != sLast) {
+                sLast=s;
+                cnt=0;
+            } else {
+                cnt++;
+            }
+            
+            // break the name into just the first word, they know who they are...
+            string fullname=s;
+            integer pos=llSubStringIndex(s, " ");
+            if (-1 != pos) {
+                s=llGetSubString(s, 0, pos-1);
+            }
+    
+            if ( 0 == cnt ) {
+                if (0 == x) {
+                    llSay(0, "Look but don't touch, " + s + "(then touch when I'm not looking). ;)");
+                } else if (1 == x) {
+                    llSay(0, "Like what you see, " + s + "?");
+                } else if (2 == x) {
+                    llSay(0, "Now show me yours, " + s + "! ;)");
+                } else if (3 == x) {
+                    llSay(0, "Nice touch, " + s + " ;)");
+                } else {
+                    llSay(0, "Oooh, do it again, " + s + "!");
+                }
+            } else if (1 == cnt) {
+                llSay(0, s + " seems to like petting tails ;)");
+            } else if (2 == cnt) {
+                llSay(0, "Mmm... careful, " + s + ", you're gonna get bit. ;)");
+            } else {
+                llSay(0, "All right, " + fullname + ", time for a little nibble ;)");
+                cnt=0;
+                sLast="";
+            }
+                
+        }
+    }
+}

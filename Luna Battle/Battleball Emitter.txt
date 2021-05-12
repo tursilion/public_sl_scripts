@@ -1,0 +1,18 @@
+default
+{
+    state_entry()
+    {
+    }
+
+    on_rez(integer r)
+    {
+        llResetScript();
+    }
+    
+    link_message(integer Sender, integer Number, string str, key Key) 
+    {
+        if (str=="getname") {
+            llMessageLinked(Sender, 0, "name", llGetKey());
+        }
+    }
+}

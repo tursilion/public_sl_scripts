@@ -1,0 +1,92 @@
+integer nListen;
+integer bAttach=0;
+integer nDir=0;
+integer isLive = 0;
+vector force=<35,0,0>;
+vector finalforce;
+rotation rotated;
+integer i3;
+integer i4;
+
+fire() {
+    isLive=0;
+    // set ourselves up and fire away
+    llSetStatus(STATUS_PHANTOM, TRUE);
+    llSetStatus(STATUS_PHYSICS | STATUS_BLOCK_GRAB, TRUE);
+    llSetForce(finalforce, FALSE);
+    llSetTimerEvent(1.0); // set solid timer
+    llSetPrimitiveParams([PRIM_TEMP_ON_REZ, TRUE]);
+}  
+
+doAttach() {
+    llAttachToAvatar(0);
+    llListenRemove(nListen);        // no need to keep the old listen
+    bAttach=1;
+    nListen=llListen(-42, "", NULL_KEY, "megaclear");
+}
+
+default
+{
+    state_entry()
+    {
+        nListen = llListen(42, "", llGetOwner(), "megabust");
+    }
+
+    on_rez(integer start) {
+        bAttach=0;
+        if (start != 0) {
+            nDir=start;
+            if (llGetPermissions() & PERMISSION_ATTACH) {
+                doAttach();
+            } else {
+                llRequestPermissions(llGetOwner(), PERMISSION_ATTACH);
+            }
+        }
+    }
+            
+    run_time_permissions(integer perm) {
+        if (perm & PERMISSION_ATTACH) {
+            doAttach();
+        } else {
+            // if permissions are declined, then fire it off instead
+            // calculate the direction to go
+            i3=nDir/1000;
+            i4=nDir%1000;
+            rotated=<0.0, 0.0, (float)(i3/500.0)-1.0,(float)(i4/500.0)-1.0>;
+            finalforce=force*rotated;
+            fire();
+        }
+    }
+    
+    listen(integer channel, string name, key id, string message) {
+        // manual launch if the owner types the listen keyword (for testing)
+        // make sure you save first!
+        if (message == "megabust") {
+            if (0 == bAttach) {            
+                if (llGetPermissions() & PERMISSION_ATTACH) {
+                    doAttach();
+                } else {
+                    llRequestPermissions(llGetOwner(), PERMISSION_ATTACH);
+                }
+            }
+        } 
+        if (message == "megaclear") {
+            if (1 == bAttach) {
+                bAttach=0;
+                llOwnerSay("Warning: 'Mega Wood Shield' copy remains in inventory - it is safe to delete it");
+                llDetachFromAvatar();
+            }
+        }
+    }    
+
+    timer() {
+        if (isLive != 0) {
+            llDie();
+        } else {
+            llSetStatus(STATUS_PHANTOM, FALSE);
+            llSetTimerEvent(5.0);   // set die timer
+            isLive=1;
+        }
+    }        
+    
+}

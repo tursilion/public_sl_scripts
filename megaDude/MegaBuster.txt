@@ -1,0 +1,54 @@
+rotation rot;
+integer tmp;
+integer ison=0;
+
+tornado() {
+    // test 1 - launch a set of three tornados
+    llRezObject("Mega Tornado", llGetPos() + <0, -0.1, 0>, <0,-1,1>, llEuler2Rot(<0,PI,0>), tmp);
+}
+
+bubble() {
+    llRezObject("Mega Bubble Weight", llGetPos() + <0, -0.1, 0>, ZERO_VECTOR, ZERO_ROTATION, tmp);
+}    
+
+wood() {
+    // note: wood shield launches if attach is declined
+    llRezObject("Mega Wood Shield", llGetPos(), ZERO_VECTOR, llEuler2Rot(<0,PI/2,0>), tmp);
+}
+
+removeold() {
+    llWhisper(-42, "megaclear");
+}
+
+default
+{
+    state_entry()
+    {
+        llSay(0, "Hello, Avatar!");
+    }
+
+    touch_start(integer total_number)
+    {
+        rot=llGetRot();
+        // X=0
+        // Y=0
+        // ((Z+1.0)*500)*1000 +
+        // (S+1.0)*500
+        tmp=((integer)((rot.z+1.0)*500)*1000) + ((integer)((rot.s+1.0)*500));
+        if (tmp==0) tmp=1;  // small offset to disallow zero
+//      llSay(0, "launching rotation " + (string)rot + " value " + (string)tmp);
+
+//      tornado();
+      bubble();
+
+        // add and remove wood shield
+//        if (ison) {
+//            removeold();
+//            ison=0;
+//        } else {
+//            wood();
+//            ison=1;
+//        }
+        
+    }
+}

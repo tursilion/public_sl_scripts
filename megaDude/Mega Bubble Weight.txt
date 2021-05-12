@@ -1,0 +1,76 @@
+// Simple mega bubble weight script by Tursi
+
+integer isLive = 0;
+vector force=<1.1,0,-0.5>;
+vector finalforce;
+float size = 0.380;
+rotation rotated;
+integer i3;
+integer i4;
+
+fire() {
+    isLive=0;
+    // set ourselves up and fire away
+    llSetStatus(STATUS_PHYSICS | STATUS_BLOCK_GRAB, TRUE);
+    llSetForce(finalforce, FALSE);
+    llSetTimerEvent(0.1); // set solid timer
+    llSetPrimitiveParams([PRIM_TEMP_ON_REZ, TRUE]);
+}    
+
+default
+{
+    state_entry()
+    {
+        // just to make work easier, make sure we're set up
+        // with the flags disabled
+        llSetStatus(STATUS_PHYSICS | STATUS_BLOCK_GRAB | STATUS_DIE_AT_EDGE, FALSE);
+        llSetStatus(STATUS_PHANTOM, TRUE);
+        isLive=0;
+        llListen(42, "", llGetOwner(), "megabust");
+    }
+
+    on_rez(integer start) {
+        // pass any non-zero value to llRezObject
+        // the value is the rotation of the avatar:
+        // X=0
+        // Y=0
+        // ((Z+1.0)*500)*1000 +
+        // (S+1.0)*500
+        // rotation values range from -1 to +1
+        if (start != 0) {
+            // calculate the direction to go
+            i3=start/1000;
+            i4=start%1000;
+            rotated=<0.0, 0.0, (float)(i3/500.0)-1.0,(float)(i4/500.0)-1.0>;
+            finalforce=force*rotated;
+            fire();
+        }
+    }
+    
+    timer() {
+        if (isLive != 0) {
+            llDie();
+        } else {
+            // need to disable physics to change size
+            llSetStatus(STATUS_PHYSICS, FALSE);
+            llSetScale(<size,size,size>);
+            // now that we are sized, we can re-enable physics
+            llSetStatus(STATUS_PHYSICS, TRUE);
+            // reset the force
+            llSetForce(finalforce*3, FALSE);
+            llSetStatus(STATUS_PHANTOM, FALSE);
+            llSetTimerEvent(9.0);   // set die timer
+            isLive=1;
+        }
+    }
+    
+    listen(integer channel, string name, key id, string message) {
+        // manual launch if the owner types the listen keyword (for testing)
+        // make sure you save first!
+        if (message == "megabust") {
+            // set ourselves up and fire away
+            finalforce=force;
+            fire();
+        } 
+    }
+}

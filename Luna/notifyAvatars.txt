@@ -1,0 +1,129 @@
+// avatar detection and message script 
+// 11/21/2013 - Tursi Jackon
+
+string notice="Reminder: Canterlot is an IC roleplay based sim, and not a sandbox. All areas are IC, and the Throne Room is IC only - you are expected to conduct yourself accordingly. If you can not, you may be ejected with little to no warning. This is just a repeat of the terms in the welcome area, so play nicely!";
+integer scantime = 30;
+
+// variables - don't touch
+list who = [];
+key searchmode = NULL_KEY;
+integer listen1=0;
+integer listen0=0;
+
+dumplist(key id, string str) {
+    // tell the clicker who is in the list, matching substring of str
+    integer l = (who != []);        // trick - returns length (length - length of [], which is 0)
+    integer match=0;
+    integer idx;
+    llRegionSayTo(id, 0, "Memory size (out of 16384): " + (string)llStringLength((string)who));
+
+    str = llToLower(str);
+    for (idx=0; idx<l; idx++) {
+        string nm = llList2String(who, idx);
+        string test = llToLower(nm);
+        if (ERR_GENERIC != llSubStringIndex(test, str)) {
+            llRegionSayTo(id, 0, "- " + nm);
+            match++;
+            // to avoid throttle limits, pause every 50
+            if (match % 50 == 0) {
+                llSleep(0.8);
+            }
+        }
+    }
+    llRegionSayTo(id, 0, "Found " + (string)match + " of " + (string)l + " names.");
+}
+
+verifyname(key id) {
+    string nm = llKey2Name(id);
+    list sublist = [ nm ];
+    integer x = llListFindList(who, sublist);
+    if (ERR_GENERIC == x) {
+        // not found, so warn and add
+        llInstantMessage(id, notice);
+        who += nm;
+    } else {
+        // found at x, so remove and put at the end
+        who = llDeleteSubList(who, x, x) + nm;
+    }
+}    
+
+trimlist() {
+    // reduce the list if it is larger than 30k
+    integer len = llStringLength((string)who);
+    if (len <= 16384) return;
+    
+    while (llStringLength((string)who) > 16384) {
+        who = llDeleteSubList(who, 0, 0); 
+    }
+        
+    integer cnt = (who != []);
+    if (cnt == 0) {
+        llOwnerSay("Out of memory and nobody in the list!");
+    } else {
+        llOwnerSay("Reduced notify list to " + (string)cnt + " entries.");
+    }
+}
+
+default
+{
+    state_entry()
+    {
+        llSay(0, "Initializing detection...");
+        llSetTimerEvent(0.1);
+    }
+
+    touch_start(integer total_number)
+    {
+        string name=llDetectedName(0);
+        if (name == "Tursi Jackson" || name == "Aurkae Rhiannyr") {
+            searchmode = llDetectedKey(0);
+            listen1=llListen(1, "", searchmode, "");
+//            listen0=llListen(0, "", searchmode, "");    // for debug only
+            llRegionSayTo(searchmode, 0, "Listening for 30 seconds, say search on channel 1");
+            llSetTimerEvent(30);
+        }
+    }
+    
+    listen(integer chan, string name, key id, string nm) {
+        if (chan == 0) {
+            // test code to add a name
+            list sublist = [ nm ];
+            integer x = llListFindList(who, sublist);
+            if (ERR_GENERIC == x) {
+                // not found, so add
+                who += nm;
+            } else {
+                // found at x, so remove and put at the end
+                who = llDeleteSubList(who, x, x) + nm;
+            }
+        } else {
+            llRegionSayTo(id, 0, "Searching for '" + nm + "'");
+            dumplist(id, nm);
+            searchmode = NULL_KEY;
+            llListenRemove(listen1);
+            llListenRemove(listen0);
+        }
+    }
+    
+    timer()
+    {
+        if (searchmode == NULL_KEY) {
+            trimlist();
+            list x = llGetAgentList(AGENT_LIST_REGION, []);
+            integer l = (x != []);
+//            llOwnerSay("Got " + (string)l + " agents: " + (string)x);
+            integer idx;
+            for (idx=0; idx<l; idx++) {
+                key id = llList2Key(x,idx);
+                verifyname(id);
+            }
+        } else {
+            llRegionSayTo(searchmode, 0, "Search time expired.");
+            searchmode=NULL_KEY;
+            llListenRemove(listen1);
+            llListenRemove(listen0);
+        }
+
+        llSetTimerEvent(scantime);
+    }
+}

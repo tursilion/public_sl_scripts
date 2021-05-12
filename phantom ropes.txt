@@ -1,0 +1,26 @@
+trans() {
+    llSetLinkPrimitiveParamsFast(0, [PRIM_PHANTOM, TRUE]);
+    llSetTimerEvent(5.0);
+}
+
+solid() {
+    llSetLinkPrimitiveParamsFast(0, [PRIM_PHANTOM, FALSE]);
+    llSetTimerEvent(0.0);
+}
+
+default
+{
+    state_entry()
+    {
+        solid();
+        llListen(888, "", NULL_KEY, "rope");
+    }
+
+    listen(integer chan, string name, key id, string msg) {
+        trans();
+    }
+    
+    timer() {
+        solid();
+    }
+}

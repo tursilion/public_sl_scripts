@@ -1,0 +1,381 @@
+// Kale's Ultra Bot Script
+// ALBERT LIVES!
+// Contact Dr. Tursi-stein...
+
+string MyName="Albert";
+
+integer MyNameLen;
+string lcaseName;
+float speed=1.0;
+rotation tmp;
+integer jmp=0;
+integer nextjmp=0;
+vector offset;
+vector pos;
+integer phase=0;        // 0 = rotate, 1 = move
+key HeelTarget=NULL_KEY;
+key lastSorry=NULL_KEY;
+
+// Modes (must match listener scripts):
+integer modeSleep=0;    // no activity, eyes grey
+integer modeStop=1;     // awake, but idle. Will sleep if no commands for set time, blue eyes
+integer modePlay=2;     // bounces around semi-randomly, green eyes
+integer modeHeel=3;     // follows the speaker (owner can override)
+integer modeFlame=4;    // Helper for the jets to increase flame, will set back after
+integer modeSpeak=5;    // Send a speak string to the mouth
+
+// AXIS_* constants, represent the unit vector 1 unit on the specified axis.
+vector AXIS_UP = <0,0,1>;
+vector AXIS_LEFT = <0,1,0>;
+vector AXIS_FWD = <1,0,0>;
+
+// getRotToPointAxisAt()
+// Gets the rotation to point the specified axis at the specified position.
+// @param axis The axis to point. Easiest to just use an AXIS_* constant.
+// @param target The target, in region-local coordinates, to point the axis at.
+// @return The rotation necessary to point axis at target.
+// Created by Ope Rand, modifyed by Christopher Omega
+rotation getRotToPointAxisAt(vector axis, vector target) {
+    rotation turn90 = llEuler2Rot( <0, 0, 90*DEG_TO_RAD> );
+    return llGetRot() * llRotBetween(llVecNorm(axis * llGetRot()), llVecNorm(target-llGetPos())) * turn90;
+}
+
+default
+{
+    state_entry()
+    {
+        llCollisionSound("", 0.0);  // don't make noise when we hit things! :)
+        llSetStatus(STATUS_ROTATE_X | STATUS_ROTATE_Z| STATUS_ROTATE_Y, TRUE);
+        llSetStatus(STATUS_ROTATE_Y | STATUS_ROTATE_Z, FALSE);
+        llSetStatus(STATUS_PHYSICS, TRUE);
+        llSetStatus(STATUS_SANDBOX, FALSE);
+        offset=llGetPos();
+        MyNameLen=llStringLength(MyName);
+        lcaseName=llToLower(MyName);
+        
+        state Sleep;
+    }
+}
+
+state Sleep
+{
+    // Commands supported: wake
+       
+    state_entry()
+    {
+        // Drift to the ground, turn off flame and set eyes grey
+        llMessageLinked(LINK_ALL_OTHERS, modeSpeak, "Shutting down...", NULL_KEY);
+        llMessageLinked(LINK_ALL_OTHERS, modeSleep, "", NULL_KEY);
+        vector pos = llGetPos();
+        pos+=<0, 0, -2.0>;
+        llMoveToTarget(pos, .3);
+        llSetTimerEvent(0.0);
+        llListen(0, "", NULL_KEY, "");
+    }
+
+    collision_start(integer num) {
+        llStopMoveToTarget();
+    }
+    
+    listen(integer channel, string name, key id, string msg) {
+        list lst;
+        
+        lst=llParseString2List(llToLower(msg), [" ", ","], []);
+
+        if (llGetListLength(lst) == 2) {    // only support commands like "Albert, heel"
+            string tmp;
+            
+            tmp=llList2String(lst, 0);
+            if (tmp == lcaseName) {
+                tmp=llList2String(lst, 1);
+                if (tmp=="wake") {
+                    llMessageLinked(LINK_ALL_OTHERS, modeSpeak, "I am Kale's Ultrabot, my name is " + MyName, NULL_KEY);
+                    vector pos = llGetPos();
+                    pos+=<0, 0, 0.1>;
+                    llMoveToTarget(pos, .3);
+                    state Stop;
+                }
+            }
+        }
+    }
+}
+
+state Stop
+{
+    // Commands supported: heel, play, sleep
+       
+    state_entry()
+    {
+        llMessageLinked(LINK_ALL_OTHERS, modeSpeak, "Ready for command...", NULL_KEY);
+        // turn on flame and set eyes blue
+        llMessageLinked(LINK_ALL_OTHERS, modeStop, "", NULL_KEY);
+        llSetTimerEvent(60.0);
+        llListen(0, "", NULL_KEY, "");
+    }
+
+    collision_start(integer num) {
+        llStopMoveToTarget();
+    }
+    
+    timer()
+    {
+        // 60 seconds and we go to sleep 
+        state Sleep;
+    }
+    
+    listen(integer channel, string name, key id, string msg) {
+        list lst;
+        
+        lst=llParseString2List(llToLower(msg), [" ", ","], []);
+
+        if (llGetListLength(lst) == 2) {    // only support commands like "Albert, heel"
+            string tmp;
+            
+            tmp=llList2String(lst, 0);
+            if (tmp == lcaseName) {
+                tmp=llList2String(lst, 1);
+                if (tmp=="heel") {
+                    HeelTarget=id;
+                    state Heel;
+                }
+                if (tmp=="play") {
+                    state Play;
+                }
+                if (tmp=="sleep") {
+                    state Sleep;
+                }
+            }
+        }
+    }
+}
+
+state Heel
+{
+    // Commands supported: heel (owner override), play, sleep, stop
+       
+    state_entry()
+    {
+        // set eyes red
+        llMessageLinked(LINK_ALL_OTHERS, modeSpeak, "I will follow you, " + llKey2Name(HeelTarget), NULL_KEY);
+        llMessageLinked(LINK_ALL_OTHERS, modeHeel, "", NULL_KEY);
+        llSetTimerEvent(0.5);
+        lastSorry=NULL_KEY;
+        llListen(0, "", NULL_KEY, "");
+    }
+    
+    listen(integer channel, string name, key id, string msg) {
+        list lst;
+
+        lst=llParseString2List(llToLower(msg), [" ", ","], []);
+
+        if (llGetListLength(lst) == 2) {    // only support commands like "Albert, heel"
+            string tmp;
+            key owner=llGetOwner();
+            
+            tmp=llList2String(lst, 0);
+            if (tmp == lcaseName) {
+                if ((HeelTarget == owner)&&(id != owner)) {
+                    if (id != lastSorry) {
+                        // if following the owner, nobody else may command him
+                        // Not repeating to the same person reduces abuse
+                        llMessageLinked(LINK_ALL_OTHERS, modeSpeak, "Sorry, I am with " + llKey2Name(HeelTarget), NULL_KEY);
+                        lastSorry=id;
+                    }
+                } else {
+                    tmp=llList2String(lst, 1);
+                    if (tmp=="heel") {
+                        HeelTarget=id;
+                        state Heel;
+                    }
+                    if (tmp=="play") {
+                        state Play;
+                    }
+                    if (tmp=="sleep") {
+                        state Sleep;
+                    }
+                    if (tmp=="stop") {
+                        state Stop;
+                    }
+                }
+            }
+        }
+    }
+
+    collision_start(integer num) {
+        if (jmp == 0) {
+            // we just try to jump out of the way
+            nextjmp=1;
+        }
+        if (jmp == 2) {
+            // we are landing, so just stop and move up a tad
+            vector pos = llGetPos();
+            pos+=<0, 0, 0.01>;
+            llMoveToTarget(pos, .3);
+            jmp=0;
+            nextjmp=0;
+        }
+    }
+
+    timer()
+    {
+        rotation angle;
+
+        if (phase != 2) {   // if not still scanning
+            if (jmp == 0) {
+                if (phase == 0) {
+                    // Find our target
+                    llSensor("", HeelTarget, AGENT, 96.0, TWO_PI);
+                    phase=2;
+                } else {
+                    phase=0;
+    
+                    if (nextjmp) {
+                        llMessageLinked(LINK_ALL_OTHERS, modeFlame, "", NULL_KEY);
+                        pos+=<0,0,1.0>;
+                        nextjmp=0;
+                        jmp=1;
+                        //pos+=offset;
+                        llMoveToTarget(pos,.3);
+                    } else {
+                        pos+=offset;
+                        llMoveToTarget(pos,2.0);
+                    }
+                }                
+            } else {
+                llMessageLinked(LINK_ALL_OTHERS, modeHeel, "", NULL_KEY);
+                pos = llGetPos(); 
+                offset+=<0,0,-1.5>;
+                jmp=2;
+                pos+=offset;
+                llMoveToTarget(pos,.3);
+            }
+        }
+    } 
+    
+    no_sensor() {
+        // we've lost our heel target, go back to stop mode
+        llMessageLinked(LINK_ALL_OTHERS, modeSpeak, "I've lost " + llKey2Name(HeelTarget), NULL_KEY);
+        HeelTarget=NULL_KEY;
+        state Stop;
+    }
+    
+    sensor(integer num) {
+        // Since we search by key, there should be only 1!
+        vector targetpos=llDetectedPos(0);
+        pos=llGetPos();
+        
+        if (<0,0,0> != targetpos) {
+            rotation angle;
+            
+            offset = targetpos-pos;
+            tmp=llGetRot();
+            angle=getRotToPointAxisAt(AXIS_LEFT, offset+pos);
+            llRotLookAt(angle, 1.0, 0.1);
+
+            if (llVecDist(targetpos, pos) >= 4.0) {
+                // We need to move
+                // Don't run into the target!
+                targetpos+=llVecNorm(pos-targetpos);
+                targetpos+=llVecNorm(pos-targetpos);
+                targetpos+=llVecNorm(pos-targetpos);
+                offset = targetpos-pos;
+                offset+=<0, 0, 0.5>;
+                phase=1;
+            } else {
+                phase=0;
+            }
+        }
+    }
+}
+
+state Play 
+{
+    // Commands supported: heel, sleep, stop
+
+    state_entry()
+    {
+        // Start up random activity, turn on flame and set eyes green
+        llMessageLinked(LINK_ALL_OTHERS, modeSpeak, "Entering play mode!", NULL_KEY);
+        llMessageLinked(LINK_ALL_OTHERS, modePlay, "", NULL_KEY);
+        llSetTimerEvent(1.0);
+        llListen(0, "", NULL_KEY, "");
+    }
+
+    collision_start(integer num) {
+        if (jmp == 0) {
+            // we just try to jump out of the way
+            nextjmp=1;
+        }
+        if (jmp == 2) {
+            // we are landing, so just stop and move up a tad
+            vector pos = llGetPos();
+            pos+=<0, 0, 0.01>;
+            llMoveToTarget(pos, .3);
+            jmp=0;
+            nextjmp=0;
+        }
+    }
+
+    timer()
+    {
+        rotation angle;
+
+        if (jmp == 0) {
+            if (phase == 0) {
+                pos = llGetPos(); 
+                offset =<llFrand(speed*2.0)-speed, llFrand(speed*2.0)-speed, 0.0>;
+                tmp=llGetRot();
+                angle=getRotToPointAxisAt(AXIS_LEFT, offset+pos);
+                llRotLookAt(angle, 1.0, 0.1);
+                phase=1;
+            } else {
+                phase=0;
+
+                if (nextjmp) {
+                    llMessageLinked(LINK_ALL_OTHERS, modeFlame, "", NULL_KEY);
+                    pos+=<0,0,1.0>;
+                    nextjmp=0;
+                    jmp=1;
+                } else {
+                    pos+=<0, 0, -0.1>;
+                }
+                pos+=offset;
+                llMoveToTarget(pos,.3);
+            }                
+        } else {
+            llMessageLinked(LINK_ALL_OTHERS, modePlay, "", NULL_KEY);
+            pos = llGetPos(); 
+            offset+=<0,0,-2.2>;
+            jmp=2;
+            pos+=offset;
+            llMoveToTarget(pos,.3);
+        }
+    } 
+
+    listen(integer channel, string name, key id, string msg) {
+        list lst;
+
+        lst=llParseString2List(llToLower(msg), [" ", ","], []);
+
+        if (llGetListLength(lst) == 2) {    // only support commands like "Albert, heel"
+            string tmp;
+            
+            tmp=llList2String(lst, 0);
+            if (tmp == lcaseName) {
+                tmp=llList2String(lst, 1);
+                if (tmp=="heel") {
+                    HeelTarget=id;
+                    state Heel;
+                }
+                if (tmp=="sleep") {
+                    state Sleep;
+                }
+                if (tmp=="stop") {
+                    state Stop;
+                }
+            }
+        }
+    }
+
+}
+

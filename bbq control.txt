@@ -1,0 +1,79 @@
+// Adapted by Tursi
+
+// set this to a channel to listen on. This is so the owner can force a state
+integer channel = 1;
+key owner;
+integer isopen;
+
+do_open() 
+{
+    llParticleSystem([  PSYS_PART_FLAGS, PSYS_PART_WIND_MASK|PSYS_PART_INTERP_COLOR_MASK|PSYS_PART_INTERP_SCALE_MASK, 
+                        PSYS_SRC_PATTERN, PSYS_SRC_PATTERN_ANGLE_CONE,
+                        PSYS_PART_START_COLOR, <0.35, 0.35, 0.35>,
+                        PSYS_PART_END_COLOR, <0.85, 0.85, 0.85>,
+                        PSYS_PART_START_ALPHA, 0.85,
+                        PSYS_PART_END_ALPHA, 0.0,
+                        PSYS_PART_START_SCALE, <0.03, 0.03, 0.03>,
+                        PSYS_PART_END_SCALE, <2.0, 2.0, 2.0>,
+                        PSYS_PART_MAX_AGE, 10.0,
+                        PSYS_SRC_ANGLE_BEGIN, 0.0,
+                        PSYS_SRC_ANGLE_END, 1.0,
+                        PSYS_SRC_BURST_RATE, 0.3,
+                        PSYS_SRC_BURST_PART_COUNT, 5,
+                        PSYS_SRC_BURST_RADIUS, 0.01,
+                        PSYS_SRC_BURST_SPEED_MIN, 0.1,
+                        PSYS_SRC_BURST_SPEED_MAX, 0.2,
+                        PSYS_SRC_ACCEL, <0.0, 0.0, 0.2>,
+                        PSYS_SRC_OMEGA, <0.0, 0.0, 0.0>
+                    ]);
+    llMessageLinked(LINK_ALL_CHILDREN, 3, "", NULL_KEY);
+    isopen = TRUE;
+}
+do_close()
+{
+    llMessageLinked(LINK_ALL_CHILDREN, 2, "", NULL_KEY);
+    isopen = FALSE;
+    llParticleSystem([]);
+}
+
+default
+{
+    state_entry()
+    {
+        owner = llGetOwner();
+        llListen(channel, "", NULL_KEY, "");
+        isopen = FALSE;
+        do_close();
+    }
+    touch_start(integer total_number)
+    {
+        if (isopen) {
+            // then close it
+            do_close();
+        } else {
+            // then open it
+            do_open();
+        }
+    }
+    listen(integer ch, string name, key ID, string message)
+    {
+        string command=message;
+        if (ID == owner)
+        {
+            if (command == "show")
+            {
+                llMessageLinked(LINK_ALL_CHILDREN, 1, command, NULL_KEY);
+                llSetAlpha(1, ALL_SIDES);
+                isopen = FALSE;
+            }
+            else if (command == "close")
+            {
+                do_close();
+            }
+            else if (command == "open")
+            {
+                do_open();
+            }
+        }            
+    }
+}

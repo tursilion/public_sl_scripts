@@ -1,0 +1,27 @@
+// Simple link listener by Tursi
+// For Kale's Ultrabot! :)
+
+// Modes (must match listener scripts):
+integer modeSleep=0;    // no activity, eyes grey
+integer modeStop=1;     // awake, but idle. Will sleep if no commands for set time, blue eyes
+integer modePlay=2;     // bounces around semi-randomly, green eyes
+integer modeHeel=3;     // follows the speaker (owner can override), red eyes
+
+default
+{
+    // We just change color on a few states, and ignore others
+    link_message(integer from, integer int, string str, key id) {
+        if (int==modeSleep) {
+            llSetColor(<0.2, 0.2, 0.2>, ALL_SIDES);
+        }
+        if (int==modeStop) {
+            llSetColor(<0.0, 0.0, 1.0>, ALL_SIDES);
+        }
+        if (int==modePlay) {
+            llSetColor(<1.0, 1.0, 0.0>, ALL_SIDES);
+        }
+        if (int==modeHeel) {
+            llSetColor(<1.0, 0.0, 0.0>, ALL_SIDES);
+        }
+    }
+}
