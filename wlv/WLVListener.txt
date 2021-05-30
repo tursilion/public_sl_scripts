@@ -1,0 +1,445 @@
+// WLV by Sila Dione / Tursi Jackson
+// This integrates a Genesis (1/2/3) - compatible base AO with
+// some RLV gestures for turning
+// AO adapted from Newton Referee HUD
+
+// TODO: do we want a non-RLV mode for just the AO?
+
+// ** debug stuff **
+// it's the define, not the value that matters
+//#define DEBUG 1
+
+// debug wrapper
+#ifdef DEBUG
+debug(string str) {
+    llOwnerSay("DEBUG[" + (string)llGetTime() + "]: " + str);
+}
+#else
+#define debug(dummy)
+#endif
+
+// ** Gesture Stuff **
+// channel must match the channel used in the gestures!
+// RLV channels must be positive!
+#define GESTURECHAN 56929
+integer gestureListen = 0;
+
+#define FULLPI 3.14159265
+#define HALFPI 1.57079633
+
+// ** AO stuff **
+#define ROTATE_ON <0.00000, 0.00000, -1.00000, 0.00000>
+#define ROTATE_OFF <-0.00000, -0.00000, 0.70711, 0.70711>
+#define ROTATE_PAUSE <0.00000, 0.00000, -0.70711, 0.70711>
+#define ROTATE_RESET <-0.00000, -0.00000, 0.00000, 1.00000>
+
+// track our state
+integer isOn = 1;               // actually turned on or off
+float paused = 0;               // paused for a move
+integer gotSettings = 0;
+integer gotRLV = 0;
+
+// remember the last one we executed
+string currentAO;               // need to track separately from other animations
+
+// these hold the AO animations to actually use
+string WALKANIM;
+string STANDANIM;
+string RUNANIM;
+string JUMPANIM;
+string STANDUPANIM;
+
+// these eavesdrop on the wrestle commands
+#define WRESTLEHUDCHAN 67           // normally 67, for ring in gestures and move monitor
+#define UPDATETIME 0.2              // how often the AO checks
+
+// these need to match the wrestle HUD - name of command, duration
+list TIMINGLIST = [
+	"ringin", 3.0,
+	"ringinvault", 3.0,
+	"ringinslide", 3.0,
+	"climbapron", 2.0,
+	"forwardroll", 2.0,
+	"ropeshoot", 1.0
+];
+
+// ** Settings stuff
+// reading the settings notecard
+#define settingsCard "settings"
+key cardHandle;                 // reading handle
+integer cardLine;               // reading line
+key cardUUID;                   // lets us detect that it was the notecard which changed
+
+// remember values
+key owner;
+
+// wrapper to stop the AO animation only
+stopAO() {
+    if (currentAO != "") {
+        llStopAnimation(currentAO);
+        debug("Stop AO anim: " + currentAO);
+        currentAO = "";
+    }
+}
+
+// wrapper function for the AO update
+updateAO(string str, string mode) {
+    // process if not already in this mode
+    if (currentAO != str) {
+        // stop any old AO
+        stopAO();
+        // start the new one, if defined
+        if (str != "") {
+            debug("Starting AO: " + str + " for mode " + mode);
+            currentAO = str;
+            llStartAnimation(currentAO);
+        }
+    }
+}
+
+seton() {
+    isOn = 1;
+    llSetLocalRot(ROTATE_ON);   // causes a 0.2s sleep
+    llOwnerSay("AO on");
+}
+
+setoff() {
+    stopAO();
+    isOn = 0;
+    llSetLocalRot(ROTATE_OFF);   // causes a 0.2s sleep
+    llOwnerSay("AO off");
+}
+
+setpaused(float pause) {
+    stopAO();
+    llSetLocalRot(ROTATE_PAUSE);
+    paused = pause;
+}
+
+// helper function to check if animation in inventory, save a little memory
+integer checkInventory(string str, integer type) {
+    if (type != llGetInventoryType(str)) {
+        llOwnerSay("Failed inventory check, wrong type or can't find: '" + str + "'");
+        return 0;
+    }
+    return 1;
+}
+
+default
+{
+    state_entry()
+    {
+        // visual feedback
+        llSetLocalRot(ROTATE_RESET);   // causes a 0.2s sleep
+        
+        // remember who owns us
+        owner = llGetOwner();
+        if (llGetAttached() == 0) {
+            llOwnerSay("HUD is not attached - disabling.");
+            state dead;
+        }
+        
+        // ask if RLV is there
+        llSetTimerEvent(30.0);
+        gestureListen = llListen(GESTURECHAN, "", NULL_KEY, "");
+        llOwnerSay("@version="+(string)GESTURECHAN);
+
+        // start the notecard while we wait
+        llOwnerSay("Reading notecard...");
+        
+        cardUUID = llGetInventoryKey(settingsCard);
+        cardLine = 0;
+        cardHandle = llGetNotecardLine(settingsCard, cardLine);
+    }
+    
+    on_rez(integer n) {
+        llResetScript();
+    }
+    
+    changed(integer change) {
+        if (change & CHANGED_INVENTORY) {
+            if (cardUUID != llGetInventoryKey(settingsCard)) {
+                llResetScript();
+            }
+        }
+    }
+    
+    attach(key id) {
+        if (NULL_KEY != id) {
+            llResetScript();
+        }
+    }
+
+    listen(integer channel, string who, key id, string msg) {
+        if (channel == GESTURECHAN) {
+            if (llGetSubString(msg, 0, 9) == "Restrained") {
+                // least common case - version return
+                llOwnerSay("RLV detected.");
+                llSetTimerEvent(0.0);
+                gotRLV = 1;
+                if (gotSettings) {
+                    state main;
+                }
+                return;
+            }
+        }
+    }
+    
+    timer() {
+        llSetTimerEvent(0.0);
+        llOwnerSay("Did not receive reply from RLV system, is it on?");
+        state dead;
+    }
+
+    // input from the settings notecard
+    dataserver(key id, string data) {
+        if (id == cardHandle) {
+            if (data == EOF) {
+                llOwnerSay("Notecard read complete, " + (string)llGetFreeMemory() + " bytes free.");
+                gotSettings = 1;
+                if (gotRLV) {
+                    state main;
+                }
+                return;
+            }
+            
+            // increment early - it's better for debug
+            ++cardLine;
+            
+            data = llStringTrim(data, STRING_TRIM);
+            if ((llStringLength(data) > 0) && (llGetSubString(data, 0, 0) != "#")) {
+                // now we are looking for token=value strings
+                list lst = llParseString2List(data, ["="], []);
+                if (llGetListLength(lst) == 2) {
+                    // token=value
+                    string token = llStringTrim(llList2String(lst, 0), STRING_TRIM);
+                    string value = llStringTrim(llList2String(lst, 1), STRING_TRIM);
+                    
+                    if (token == "WALKANIM") {
+                        WALKANIM = value;
+                        if (!checkInventory(WALKANIM, INVENTORY_ANIMATION)) {
+                            state dead; 
+                        }
+                    } else if (token == "STANDANIM") {
+                        STANDANIM = value;
+                        if (!checkInventory(STANDANIM, INVENTORY_ANIMATION)) {
+                            state dead; 
+                        }
+                    } else if (token == "RUNANIM") {
+                        RUNANIM = value;
+                        if (!checkInventory(RUNANIM, INVENTORY_ANIMATION)) {
+                            state dead; 
+                        }
+                    } else if (token == "JUMPANIM") {
+                        JUMPANIM = value;
+
+                        if (!checkInventory(JUMPANIM, INVENTORY_ANIMATION)) {
+                            state dead; 
+                        }
+                    } else if (token == "STANDUPANIM") {
+                        STANDUPANIM = value;
+                        if (!checkInventory(STANDUPANIM, INVENTORY_ANIMATION)) {
+                            state dead; 
+                        }
+                    } else {
+                        llOwnerSay("Unknown token in line " + (string)cardLine + ": " + data);
+                        state dead;
+                    }
+                }
+            }
+
+            // and request the next line
+            cardHandle = llGetNotecardLine(settingsCard, cardLine);
+        }
+    }
+}
+
+state dead
+{
+    on_rez(integer x) {
+        llResetScript();
+    }
+    
+    attach(key id) {
+        if (id != NULL_KEY) { 
+            llResetScript();
+        }
+    }
+    
+    changed(integer change) {
+        if (change & CHANGED_INVENTORY) {
+            if (cardUUID != llGetInventoryKey(settingsCard)) {
+                llResetScript();
+            }
+        }
+    }
+    
+    touch_start(integer n) {
+        rotation rot = llGetLocalRot();
+        llOwnerSay("Rot: " + (string)rot);
+    }
+
+    state_entry()
+    {
+        llOwnerSay("Startup failed - correct and then reset all scripts");
+        llSetTimerEvent(0.0);
+    }
+}
+
+state main
+{
+    on_rez(integer x) {
+        llResetScript();
+    }
+    
+    attach(key id) {
+        if (id != NULL_KEY) { 
+            llResetScript();
+        }
+    }
+    
+    changed(integer change) {
+        if (change & CHANGED_INVENTORY) {
+            if (cardUUID != llGetInventoryKey(settingsCard)) {
+                llResetScript();
+            }
+        }
+    }
+
+    state_entry()
+    {
+        integer aoOn = -1;
+        string aos;
+        if (STANDANIM != "") { aoOn = 1; aos += "stand "; }
+        if (WALKANIM != "") { aoOn = 1; aos += "walk "; }
+        if (RUNANIM != "") { aoOn = 1; aos += "run "; }
+        if (JUMPANIM != "") { aoOn = 1;  aos += "jump "; }
+        if (STANDUPANIM != "") { aoOn = 1; aos += "stand up "; }
+        if (aoOn > 0) { 
+            llOwnerSay("AOs defined: " + aos);
+            seton();
+            // get animation permissions
+            llRequestPermissions(owner, PERMISSION_TRIGGER_ANIMATION);
+        } else {
+            llOwnerSay("No AO defined, disabling AO.");
+            setoff();
+        }
+        gestureListen = llListen(GESTURECHAN, "", NULL_KEY, "");
+        llOwnerSay("WLV Ready to go!");
+    }
+
+    // comes here after state_entry's request for animation permissions, finish up if we get them
+    run_time_permissions(integer p) {
+        if (p & PERMISSION_TRIGGER_ANIMATION) {
+            // set up the listen for wrestle hud triggers
+            // we need to listen to moves so we can auto-disable
+            llListen(WRESTLEHUDCHAN, "", NULL_KEY, "");
+
+            // report free memory in debug mode
+            debug("Free memory: " + (string)llGetFreeMemory());
+            
+            llSetTimerEvent(UPDATETIME);
+        }
+    }
+    
+    touch_start(integer total_number)
+    {
+        if (isOn == 0) {
+            seton();
+        } else {
+            setoff();
+        }
+    }
+    
+    timer() {
+        // do nothing if disabled or paused
+        if (!isOn) return;
+        
+        if (paused > 0.0) {
+            paused -= UPDATETIME;
+            if (paused <= 0.0) {
+                llSetLocalRot(ROTATE_ON);
+            }
+            return;
+        }
+
+        // so now it's okay to override, check what state to do so with
+        string x = llGetAnimation(owner);
+        // most likely cases first...
+        if (x == "Standing") {
+            // stand mode
+            updateAO(STANDANIM, x);
+        } else if (x == "Walking") {
+            // walk mode
+            updateAO(WALKANIM, x);
+        } else if (x == "Running") {
+            // run mode
+            updateAO(RUNANIM, x);
+        } else if (x == "Jumping") {
+            // jump mode
+            updateAO(JUMPANIM, x);
+        } else if (x == "Standing Up") {
+            // jump mode
+            updateAO(STANDUPANIM, x);
+        } else {
+            // none of the above mode
+            if (currentAO != "") {
+                debug("Stopping AO " + currentAO + " for mode " + x);
+                stopAO();
+            }
+        }
+    }
+    
+    listen(integer chan, string name, key id, string msg) {
+        if (chan == GESTURECHAN) {
+            if (msg == "L90") {
+                // left turn
+                vector fwd = <1,0,0>*llGetRootRotation();
+                float angle = llAtan2(fwd.x, fwd.y) - HALFPI;
+                llOwnerSay("@setrot:" + (string)angle + "=force");
+            } else if (msg == "R90") {
+                // right turn
+                vector fwd = <1,0,0>*llGetRootRotation();
+                float angle = llAtan2(fwd.x, fwd.y) + HALFPI;
+                llOwnerSay("@setrot:" + (string)angle + "=force");
+            } else if (msg == "L180") {
+                // left 180 - to force left, try to avoid sign change
+                // just observation, but seems to work for now
+                vector fwd = <1,0,0>*llGetRootRotation();
+                // half to do it as two steps to force left turn
+                float angle = llAtan2(fwd.x, fwd.y) - HALFPI;
+                llOwnerSay("@setrot:" + (string)angle + "=force");
+                llSleep(0.1);
+                angle -= HALFPI;
+                llOwnerSay("@setrot:" + (string)angle + "=force");
+            }
+        } else if (chan == WRESTLEHUDCHAN) {
+            if (id == owner) {
+                if (msg == "clear") {
+                    // we can release our pause, the AO will pick up after
+                    paused = 0;
+                    llSetLocalRot(ROTATE_ON);
+                } else {
+                    // we presume that we are doing something important
+                    // there are a tiny list of animations that we will know,
+                    // anything else the player needs to explicitly clear to get
+                    // the AO back online.
+                    // if there's a || filter, remove it
+                    // Syntaxes are: "anim", "anim||opponent", and "anim||delay||opponent"
+                    list x = llParseString2List(msg,["||"],[]);
+                    string lcl = llList2String(x,0);
+                    if (lcl != "") {
+                        float dur = 999.0;
+                        // special case because turning these off is harder to remember
+                        // these animations have a hard coded duration
+                        integer p = llListFindList(TIMINGLIST, [lcl]);
+                        if (-1 != p) {
+                            dur = llList2Integer(TIMINGLIST, p+1);
+                        }
+                        setpaused(dur);
+                    }
+                }
+            }
+        }
+    }
+}

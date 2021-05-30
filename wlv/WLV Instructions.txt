@@ -1,0 +1,30 @@
+Color meaning:
+- WHITE - initializing, just wait
+- GREEN - ready to go, AO active
+- BLUE - Genesis move detected, AO paused. Press F12 to clear.
+- RED - AO disabled - click to disable/enable
+
+To activate the AO, you must provide the animations that you want to use. You can provide as few or as many as you like - recommended are stand, walk and run. The following are supported:
+
+WALKANIM = 
+STANDANIM = 
+RUNANIM = 
+JUMPANIM = 
+STANDUPANIM = 
+
+Drop the animation into the HUD and fill in the name as appropriate. Put a # in front to ignore any line. For example, this is what Sila's looks like:
+
+WALKANIM = dz401-Walk.N
+STANDANIM = dz435-Stand.N (Adult)
+RUNANIM = dz281-Running
+JUMPANIM = dz427-Jump.N
+STANDUPANIM = dz429-Land.N (Adult)
+
+The included gestures command the HUD to trigger RLV-based turns, so you must have RLV enabled on your viewer.
+
+Right90 and Left90 will quickly turn you 90 degrees.
+Left 180 will quickly turn you 180 degrees to the left (appropriate for ropeshoot)
+TurnRopeShoot will turn 180 degrees, then play the ropeshoot anim and sound automatically.
+
+Note that RLV aiming is imprecise - you may need to manually turn a little bit after the action to line up perfectly. In particular, there seems to be an RLV bug (at least in Firestorm) that uses different base rotations for left turns and right turns. So when practical, you may want to stick mostly to left turns - when you alternate it seems to produce a smaller turn.
+
