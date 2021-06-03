@@ -418,7 +418,11 @@ state main
                 if (msg == "clear") {
                     // we can release our pause, the AO will pick up after
                     paused = 0;
-                    llSetLocalRot(ROTATE_ON);
+                    if (isOn) {
+						llSetLocalRot(ROTATE_ON);
+					} else {
+						llSetLocalRot(ROTATE_OFF);
+					}
                 } else {
                     // we presume that we are doing something important
                     // there are a tiny list of animations that we will know,
@@ -439,7 +443,29 @@ state main
                         setpaused(dur);
                     }
                 }
-            }
+            } else {
+				// if it's someone else, then check if they are attacking an opponent
+				// we don't know if the opponent is us, but it's safer to turn the AO
+				// off than to be too picky and not turn it off...
+				// we presume that we are doing something important
+				// there are a tiny list of animations that we will know,
+				// anything else the player needs to explicitly clear to get
+				// the AO back online.
+				// if there's a || filter, remove it
+				// Syntaxes are: "anim", "anim||opponent", and "anim||delay||opponent"
+				list x = llParseString2List(msg,["||"],[]);
+				string lcl = llList2String(x,1);	// this might be a time instead of a move, but we still care
+				if (lcl != "") {
+					float dur = 999.0;
+					// special case because turning these off is harder to remember
+					// these animations have a hard coded duration
+					integer p = llListFindList(TIMINGLIST, [lcl]);
+					if (-1 != p) {
+						dur = llList2Integer(TIMINGLIST, p+1);
+					}
+					setpaused(dur);
+				}
+			}
         }
     }
 }
