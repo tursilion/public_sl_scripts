@@ -28,3 +28,8 @@ TurnRopeShoot will turn 180 degrees, then play the ropeshoot anim and sound auto
 
 Note that RLV aiming is imprecise - you may need to manually turn a little bit after the action to line up perfectly. In particular, there seems to be an RLV bug (at least in Firestorm) that uses different base rotations for left turns and right turns. So when practical, you may want to stick mostly to left turns - when you alternate it seems to produce a smaller turn.
 
+In operation, any command that you perform using /67 (the normal move channel for G2 and similar HUDs) will put WLV into blue "paused" mode, which disables the AO updates. Certain moves, like the ring-in gestures, will automatically end after a couple of seconds, but most will persist until you use F12 or the CLEAR macro. This is usually adequate.
+
+However, SELL HUDS usually do not send any communication that we can eavesdrop on. In this case, you should manually click WLV to set the AO off (RED) before selling. A manual click is needed to turn it back on. 
+
+If you can code your sell HUD, you can send the message "sell" on channel 56929, and this will put WLV into paused mode for the sells.

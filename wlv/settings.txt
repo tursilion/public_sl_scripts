@@ -1,0 +1,22 @@
+# Remove the '#' and change the name for the animations you want to activate for the AO.
+# After it is working, delete all unused lines and it will load faster! (Keep a copy of the original!)
+
+# AO Animations are usally no-transfer, so you will need to extract them from your favorite AO and drop them into the
+# HUD before configuring them here. You can simply leave any animations you don't want to replace commented out (#)
+# NOTE: STANDUPANIM is after a long jump down and is NOT related to the wrestling knockdown/getup
+
+WALKANIM = dz401-Walk.N
+STANDANIM = dz435-Stand.N (Adult)
+RUNANIM = dz281-Running
+JUMPANIM = dz427-Jump.N
+STANDUPANIM = dz429-Land.N (Adult)
+
+# careful! Auto-clear can conflict with opponent moves if they trigger at the same time!
+autoclear=ringin,3.0
+autoclear=ringinvault,3.0
+autoclear=ringinslide,3.0
+autoclear=climbapron=2.0
+autoclear=forwardroll,1.7
+
+
+

@@ -1,10 +1,9 @@
-// WLV by Sila Dione / Tursi Jackson
+// WLV by Sila Dione / Tursi Jackson - 102 - 6/25/21
 // This integrates a Genesis (1/2/3) - compatible base AO with
 // some RLV gestures for turning
-// AO adapted from Newton Referee HUD
-
-// TODO: do we want a non-RLV mode for just the AO?
-
+//
+// We work around the AO race by not doing a manual AO, we just use llSetAnimationOverride!
+//
 // ** debug stuff **
 // it's the define, not the value that matters
 //#define DEBUG 1
@@ -34,13 +33,8 @@ integer gestureListen = 0;
 #define ROTATE_RESET <-0.00000, -0.00000, 0.00000, 1.00000>
 
 // track our state
-integer isOn = 1;               // actually turned on or off
-float paused = 0;               // paused for a move
 integer gotSettings = 0;
 integer gotRLV = 0;
-
-// remember the last one we executed
-string currentAO;               // need to track separately from other animations
 
 // these hold the AO animations to actually use
 string WALKANIM;
@@ -48,20 +42,6 @@ string STANDANIM;
 string RUNANIM;
 string JUMPANIM;
 string STANDUPANIM;
-
-// these eavesdrop on the wrestle commands
-#define WRESTLEHUDCHAN 67           // normally 67, for ring in gestures and move monitor
-#define UPDATETIME 0.2              // how often the AO checks
-
-// these need to match the wrestle HUD - name of command, duration
-list TIMINGLIST = [
-	"ringin", 3.0,
-	"ringinvault", 3.0,
-	"ringinslide", 3.0,
-	"climbapron", 2.0,
-	"forwardroll", 2.0,
-	"ropeshoot", 1.0
-];
 
 // ** Settings stuff
 // reading the settings notecard
@@ -73,47 +53,19 @@ key cardUUID;                   // lets us detect that it was the notecard which
 // remember values
 key owner;
 
-// wrapper to stop the AO animation only
-stopAO() {
-    if (currentAO != "") {
-        llStopAnimation(currentAO);
-        debug("Stop AO anim: " + currentAO);
-        currentAO = "";
-    }
-}
-
-// wrapper function for the AO update
-updateAO(string str, string mode) {
-    // process if not already in this mode
-    if (currentAO != str) {
-        // stop any old AO
-        stopAO();
-        // start the new one, if defined
-        if (str != "") {
-            debug("Starting AO: " + str + " for mode " + mode);
-            currentAO = str;
-            llStartAnimation(currentAO);
-        }
-    }
-}
-
+// We don't need on and off modes anymore, as the AO is internal now, no animations are triggered
 seton() {
-    isOn = 1;
-    llSetLocalRot(ROTATE_ON);   // causes a 0.2s sleep
-    llOwnerSay("AO on");
+    llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_ON] );
 }
 
+// not used anymore, unless we fail to start
 setoff() {
-    stopAO();
-    isOn = 0;
-    llSetLocalRot(ROTATE_OFF);   // causes a 0.2s sleep
-    llOwnerSay("AO off");
+	llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_OFF] );
 }
 
+// not used anymore
 setpaused(float pause) {
-    stopAO();
-    llSetLocalRot(ROTATE_PAUSE);
-    paused = pause;
+	llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_PAUSE] );    
 }
 
 // helper function to check if animation in inventory, save a little memory
@@ -130,7 +82,7 @@ default
     state_entry()
     {
         // visual feedback
-        llSetLocalRot(ROTATE_RESET);   // causes a 0.2s sleep
+		llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_RESET] );    
         
         // remember who owns us
         owner = llGetOwner();
@@ -212,7 +164,7 @@ default
                 list lst = llParseString2List(data, ["="], []);
                 if (llGetListLength(lst) == 2) {
                     // token=value
-                    string token = llStringTrim(llList2String(lst, 0), STRING_TRIM);
+                    string token = llToUpper(llStringTrim(llList2String(lst, 0), STRING_TRIM));
                     string value = llStringTrim(llList2String(lst, 1), STRING_TRIM);
                     
                     if (token == "WALKANIM") {
@@ -274,13 +226,9 @@ state dead
         }
     }
     
-    touch_start(integer n) {
-        rotation rot = llGetLocalRot();
-        llOwnerSay("Rot: " + (string)rot);
-    }
-
     state_entry()
     {
+		setoff();
         llOwnerSay("Startup failed - correct and then reset all scripts");
         llSetTimerEvent(0.0);
     }
@@ -316,78 +264,29 @@ state main
         if (JUMPANIM != "") { aoOn = 1;  aos += "jump "; }
         if (STANDUPANIM != "") { aoOn = 1; aos += "stand up "; }
         if (aoOn > 0) { 
-            llOwnerSay("AOs defined: " + aos);
-            seton();
+            llOwnerSay("Replacement animations defined: " + aos);
             // get animation permissions
-            llRequestPermissions(owner, PERMISSION_TRIGGER_ANIMATION);
+            llRequestPermissions(owner, PERMISSION_OVERRIDE_ANIMATIONS);
         } else {
-            llOwnerSay("No AO defined, disabling AO.");
-            setoff();
+            llOwnerSay("No Animations defined");
         }
         gestureListen = llListen(GESTURECHAN, "", NULL_KEY, "");
+        llSetTimerEvent(0.0);
         llOwnerSay("WLV Ready to go!");
+        seton();
     }
 
     // comes here after state_entry's request for animation permissions, finish up if we get them
     run_time_permissions(integer p) {
-        if (p & PERMISSION_TRIGGER_ANIMATION) {
-            // set up the listen for wrestle hud triggers
-            // we need to listen to moves so we can auto-disable
-            llListen(WRESTLEHUDCHAN, "", NULL_KEY, "");
-
-            // report free memory in debug mode
-            debug("Free memory: " + (string)llGetFreeMemory());
-            
-            llSetTimerEvent(UPDATETIME);
-        }
-    }
-    
-    touch_start(integer total_number)
-    {
-        if (isOn == 0) {
-            seton();
-        } else {
-            setoff();
-        }
-    }
-    
-    timer() {
-        // do nothing if disabled or paused
-        if (!isOn) return;
-        
-        if (paused > 0.0) {
-            paused -= UPDATETIME;
-            if (paused <= 0.0) {
-                llSetLocalRot(ROTATE_ON);
-            }
-            return;
-        }
-
-        // so now it's okay to override, check what state to do so with
-        string x = llGetAnimation(owner);
-        // most likely cases first...
-        if (x == "Standing") {
-            // stand mode
-            updateAO(STANDANIM, x);
-        } else if (x == "Walking") {
-            // walk mode
-            updateAO(WALKANIM, x);
-        } else if (x == "Running") {
-            // run mode
-            updateAO(RUNANIM, x);
-        } else if (x == "Jumping") {
-            // jump mode
-            updateAO(JUMPANIM, x);
-        } else if (x == "Standing Up") {
-            // jump mode
-            updateAO(STANDUPANIM, x);
-        } else {
-            // none of the above mode
-            if (currentAO != "") {
-                debug("Stopping AO " + currentAO + " for mode " + x);
-                stopAO();
-            }
-        }
+		if (p & PERMISSION_OVERRIDE_ANIMATIONS) {
+			if (STANDANIM != "") llSetAnimationOverride("Standing", STANDANIM);
+			if (WALKANIM != "") llSetAnimationOverride("Walking", WALKANIM);
+			if (RUNANIM != "") llSetAnimationOverride("Running", RUNANIM);
+			if (JUMPANIM != "") llSetAnimationOverride("Jumping", JUMPANIM);
+			if (STANDUPANIM != "") llSetAnimationOverride("Standing Up", STANDUPANIM);
+		} else {
+			llOwnerSay("AO functions will not activate due to no permission.");
+		}
     }
     
     listen(integer chan, string name, key id, string msg) {
@@ -413,59 +312,6 @@ state main
                 angle -= HALFPI;
                 llOwnerSay("@setrot:" + (string)angle + "=force");
             }
-        } else if (chan == WRESTLEHUDCHAN) {
-            if (id == owner) {
-                if (msg == "clear") {
-                    // we can release our pause, the AO will pick up after
-                    paused = 0;
-                    if (isOn) {
-						llSetLocalRot(ROTATE_ON);
-					} else {
-						llSetLocalRot(ROTATE_OFF);
-					}
-                } else {
-                    // we presume that we are doing something important
-                    // there are a tiny list of animations that we will know,
-                    // anything else the player needs to explicitly clear to get
-                    // the AO back online.
-                    // if there's a || filter, remove it
-                    // Syntaxes are: "anim", "anim||opponent", and "anim||delay||opponent"
-                    list x = llParseString2List(msg,["||"],[]);
-                    string lcl = llList2String(x,0);
-                    if (lcl != "") {
-                        float dur = 999.0;
-                        // special case because turning these off is harder to remember
-                        // these animations have a hard coded duration
-                        integer p = llListFindList(TIMINGLIST, [lcl]);
-                        if (-1 != p) {
-                            dur = llList2Integer(TIMINGLIST, p+1);
-                        }
-                        setpaused(dur);
-                    }
-                }
-            } else {
-				// if it's someone else, then check if they are attacking an opponent
-				// we don't know if the opponent is us, but it's safer to turn the AO
-				// off than to be too picky and not turn it off...
-				// we presume that we are doing something important
-				// there are a tiny list of animations that we will know,
-				// anything else the player needs to explicitly clear to get
-				// the AO back online.
-				// if there's a || filter, remove it
-				// Syntaxes are: "anim", "anim||opponent", and "anim||delay||opponent"
-				list x = llParseString2List(msg,["||"],[]);
-				string lcl = llList2String(x,1);	// this might be a time instead of a move, but we still care
-				if (lcl != "") {
-					float dur = 999.0;
-					// special case because turning these off is harder to remember
-					// these animations have a hard coded duration
-					integer p = llListFindList(TIMINGLIST, [lcl]);
-					if (-1 != p) {
-						dur = llList2Integer(TIMINGLIST, p+1);
-					}
-					setpaused(dur);
-				}
-			}
         }
     }
 }
