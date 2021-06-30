@@ -1,8 +1,10 @@
-// WLV by Sila Dione / Tursi Jackson - 102 - 6/25/21
+// WLV by Sila Dione / Tursi Jackson - 103 - 6/29/2021
 // This integrates a Genesis (1/2/3) - compatible base AO with
 // some RLV gestures for turning
 //
 // We work around the AO race by not doing a manual AO, we just use llSetAnimationOverride!
+// We don't do STAND because the way that CLEAR works makes it break pretty badly. Everything else
+// should be okay! :)
 //
 // ** debug stuff **
 // it's the define, not the value that matters
@@ -38,7 +40,6 @@ integer gotRLV = 0;
 
 // these hold the AO animations to actually use
 string WALKANIM;
-string STANDANIM;
 string RUNANIM;
 string JUMPANIM;
 string STANDUPANIM;
@@ -173,10 +174,8 @@ default
                             state dead; 
                         }
                     } else if (token == "STANDANIM") {
-                        STANDANIM = value;
-                        if (!checkInventory(STANDANIM, INVENTORY_ANIMATION)) {
-                            state dead; 
-                        }
+						// ignore this
+						llOwnerSay("STANDANIM is obsolete, you may remove it.");
                     } else if (token == "RUNANIM") {
                         RUNANIM = value;
                         if (!checkInventory(RUNANIM, INVENTORY_ANIMATION)) {
@@ -258,7 +257,6 @@ state main
     {
         integer aoOn = -1;
         string aos;
-        if (STANDANIM != "") { aoOn = 1; aos += "stand "; }
         if (WALKANIM != "") { aoOn = 1; aos += "walk "; }
         if (RUNANIM != "") { aoOn = 1; aos += "run "; }
         if (JUMPANIM != "") { aoOn = 1;  aos += "jump "; }
@@ -279,7 +277,6 @@ state main
     // comes here after state_entry's request for animation permissions, finish up if we get them
     run_time_permissions(integer p) {
 		if (p & PERMISSION_OVERRIDE_ANIMATIONS) {
-			if (STANDANIM != "") llSetAnimationOverride("Standing", STANDANIM);
 			if (WALKANIM != "") llSetAnimationOverride("Walking", WALKANIM);
 			if (RUNANIM != "") llSetAnimationOverride("Running", RUNANIM);
 			if (JUMPANIM != "") llSetAnimationOverride("Jumping", JUMPANIM);
