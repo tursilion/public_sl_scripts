@@ -1,4 +1,4 @@
-// WLV by Sila Dione / Tursi Jackson - 103 - 6/29/2021
+// WLV by Sila Dione / Tursi Jackson - 104 - 6/30/2021
 // This integrates a Genesis (1/2/3) - compatible base AO with
 // some RLV gestures for turning
 //
@@ -61,12 +61,12 @@ seton() {
 
 // not used anymore, unless we fail to start
 setoff() {
-	llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_OFF] );
+    llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_OFF] );
 }
 
 // not used anymore
 setpaused(float pause) {
-	llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_PAUSE] );    
+    llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_PAUSE] );    
 }
 
 // helper function to check if animation in inventory, save a little memory
@@ -83,7 +83,7 @@ default
     state_entry()
     {
         // visual feedback
-		llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_RESET] );    
+        llSetLinkPrimitiveParamsFast( LINK_THIS, [PRIM_ROT_LOCAL, ROTATE_RESET] );    
         
         // remember who owns us
         owner = llGetOwner();
@@ -174,8 +174,8 @@ default
                             state dead; 
                         }
                     } else if (token == "STANDANIM") {
-						// ignore this
-						llOwnerSay("STANDANIM is obsolete, you may remove it.");
+                        // ignore this
+                        llOwnerSay("STANDANIM is obsolete, you may remove it.");
                     } else if (token == "RUNANIM") {
                         RUNANIM = value;
                         if (!checkInventory(RUNANIM, INVENTORY_ANIMATION)) {
@@ -227,7 +227,7 @@ state dead
     
     state_entry()
     {
-		setoff();
+        setoff();
         llOwnerSay("Startup failed - correct and then reset all scripts");
         llSetTimerEvent(0.0);
     }
@@ -276,14 +276,15 @@ state main
 
     // comes here after state_entry's request for animation permissions, finish up if we get them
     run_time_permissions(integer p) {
-		if (p & PERMISSION_OVERRIDE_ANIMATIONS) {
-			if (WALKANIM != "") llSetAnimationOverride("Walking", WALKANIM);
-			if (RUNANIM != "") llSetAnimationOverride("Running", RUNANIM);
-			if (JUMPANIM != "") llSetAnimationOverride("Jumping", JUMPANIM);
-			if (STANDUPANIM != "") llSetAnimationOverride("Standing Up", STANDUPANIM);
-		} else {
-			llOwnerSay("AO functions will not activate due to no permission.");
-		}
+        if (p & PERMISSION_OVERRIDE_ANIMATIONS) {
+            llResetAnimationOverride("ALL");
+            if (WALKANIM != "") llSetAnimationOverride("Walking", WALKANIM);
+            if (RUNANIM != "") llSetAnimationOverride("Running", RUNANIM);
+            if (JUMPANIM != "") llSetAnimationOverride("Jumping", JUMPANIM);
+            if (STANDUPANIM != "") llSetAnimationOverride("Standing Up", STANDUPANIM);
+        } else {
+            llOwnerSay("AO functions will not activate due to no permission.");
+        }
     }
     
     listen(integer chan, string name, key id, string msg) {

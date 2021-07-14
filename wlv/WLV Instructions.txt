@@ -1,24 +1,27 @@
 Color meaning:
 - WHITE - initializing, just wait
-- GREEN - ready to go, AO active
-- BLUE - Genesis move detected, AO paused. Press F12 to clear.
-- RED - AO disabled - click to disable/enable
+- GREEN - ready to go
+- RED - Startup failed
 
-To activate the AO, you must provide the animations that you want to use. You can provide as few or as many as you like - recommended are stand, walk and run. The following are supported:
+This tool provides you with replacement animations like an AO, and we will use the term AO, but it's important to note that it actually uses the LL override animation function, and does not explicitly play the animations. This means it works within the system and does not conflict with moves!
+
+It also provides some RLV assists for rotations. RLV must be active in your viewer for this to work.
+
+To activate the AO, you must provide the animations that you want to use. You can provide as few or as many as you like - recommended are walk and run. The following are supported:
 
 WALKANIM = 
-STANDANIM = 
 RUNANIM = 
 JUMPANIM = 
 STANDUPANIM = 
 
-Drop the animation into the HUD and fill in the name as appropriate. Put a # in front to ignore any line. For example, this is what Sila's looks like:
+Drop the animation into the HUD and fill in the name as appropriate. Put a # in front to ignore any line, or remove it if you want to activate the line. For example, this is what Sila's looks like:
 
 WALKANIM = dz401-Walk.N
-STANDANIM = dz435-Stand.N (Adult)
 RUNANIM = dz281-Running
 JUMPANIM = dz427-Jump.N
 STANDUPANIM = dz429-Land.N (Adult)
+
+NOTE: Most wrestling animations run at priority 4, so you need to use priority 3 or lower to avoid conflicting with moves. Since there's no stand override, this applies only to moving during a move. An easy way to test is to use the roll and make sure moving after you start the roll doesn't interrupt it.
 
 The included gestures command the HUD to trigger RLV-based turns, so you must have RLV enabled on your viewer.
 
@@ -28,8 +31,4 @@ TurnRopeShoot will turn 180 degrees, then play the ropeshoot anim and sound auto
 
 Note that RLV aiming is imprecise - you may need to manually turn a little bit after the action to line up perfectly. In particular, there seems to be an RLV bug (at least in Firestorm) that uses different base rotations for left turns and right turns. So when practical, you may want to stick mostly to left turns - when you alternate it seems to produce a smaller turn.
 
-In operation, any command that you perform using /67 (the normal move channel for G2 and similar HUDs) will put WLV into blue "paused" mode, which disables the AO updates. Certain moves, like the ring-in gestures, will automatically end after a couple of seconds, but most will persist until you use F12 or the CLEAR macro. This is usually adequate.
-
-However, SELL HUDS usually do not send any communication that we can eavesdrop on. In this case, you should manually click WLV to set the AO off (RED) before selling. A manual click is needed to turn it back on. 
-
-If you can code your sell HUD, you can send the message "sell" on channel 56929, and this will put WLV into paused mode for the sells.
+Animations will persist even if you remove the HUD. If you want to reset your animations after you remove the HUD, just wear the "Reset Animations" HUD. It will do the reset and then automatically detach.

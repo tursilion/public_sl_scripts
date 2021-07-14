@@ -1,0 +1,23 @@
+// If you want to reset your animations back to SL default, just wear this HUD
+// It will reset the anims that Newton can update, and that's all!
+
+default {
+    state_entry() {
+        llSetText("Resetting animations...", <1.0,1.0,1.0>, 1.0);
+    }
+    attach(key id) {
+        if (id) llRequestPermissions(id, PERMISSION_OVERRIDE_ANIMATIONS);
+    }
+
+    run_time_permissions(integer perms)
+    {
+        if ( perms & PERMISSION_OVERRIDE_ANIMATIONS ) {
+            llResetAnimationOverride("ALL");
+            llOwnerSay("Animations are reset to SL default. HUD should auto-detach.");
+            llSetText("Done Resetting animations\nDetach this HUD", <1.0,1.0,1.0>, 1.0);
+            llDetachFromAvatar();
+        } else {
+            llSetText("Resetting animations failed\nDetach and try again", <1.0,1.0,1.0>, 1.0);
+        }
+    }
+}
