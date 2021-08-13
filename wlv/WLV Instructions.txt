@@ -32,3 +32,14 @@ TurnRopeShoot will turn 180 degrees, then play the ropeshoot anim and sound auto
 Note that RLV aiming is imprecise - you may need to manually turn a little bit after the action to line up perfectly. In particular, there seems to be an RLV bug (at least in Firestorm) that uses different base rotations for left turns and right turns. So when practical, you may want to stick mostly to left turns - when you alternate it seems to produce a smaller turn.
 
 Animations will persist even if you remove the HUD. If you want to reset your animations after you remove the HUD, just wear the "Reset Animations" HUD. It will do the reset and then automatically detach.
+
+Finally, there is also a built-in moves monitor that listens to both comms (63) and moves (67). By default it's on, click it to toggle. It will toggle through 8 modes that include comms or moves or both, on or off, and filtered (by group) or unfiltered. The default mode is both on, filtered. 
+
+You can change the startup mode with:
+
+listen=3
+
+The number indicates the default setting, and can be from 0 to 7. Just add the values you want to enable:
+- to listen to moves on 67, add 1
+- to listen to comms on 63, add 2
+- to disable the group filter and listen to anyone on those channels, add 4
