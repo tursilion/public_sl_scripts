@@ -1,8 +1,8 @@
-// WLV by Sila Dione / Tursi Jackson - 104 - 6/30/2021
+// WLV by Sila Dione / Tursi Jackson - 105 - 8/13/2021
 // This integrates a Genesis (1/2/3) - compatible base AO with
-// some RLV gestures for turning
+// some RLV gestures for turning, and monitors for comms/moves (63/67)
 //
-// We work around the AO race by not doing a manual AO, we just use llSetAnimationOverride!
+// We work around the AO race issue by not doing a manual AO, we just use llSetAnimationOverride!
 // We don't do STAND because the way that CLEAR works makes it break pretty badly. Everything else
 // should be okay! :)
 //
@@ -13,7 +13,7 @@
 // debug wrapper
 #ifdef DEBUG
 debug(string str) {
-    llOwnerSay("DEBUG[" + (string)llGetTime() + "]: " + str);
+    llOwnerSay("WLVDEBUG[" + (string)llGetTime() + "]: " + str);
 }
 #else
 #define debug(dummy)
@@ -44,6 +44,13 @@ string RUNANIM;
 string JUMPANIM;
 string STANDUPANIM;
 
+// comms/moves monitors
+#define COMMSHUDCHAN 63     // channel for comms (for listening only, normally 63)
+#define WRESTLEHUDCHAN 67   // normally 67, for ring in gestures and move monitor
+integer listenMode = 3;		// bit 0 = moves, bit 1 = comms, bit 2 = no filter
+integer commsHandle=0;      // holds the listen handle for comms
+integer movesHandle=0;      // holds the listen handle for moves
+
 // ** Settings stuff
 // reading the settings notecard
 #define settingsCard "settings"
@@ -72,10 +79,47 @@ setpaused(float pause) {
 // helper function to check if animation in inventory, save a little memory
 integer checkInventory(string str, integer type) {
     if (type != llGetInventoryType(str)) {
-        llOwnerSay("Failed inventory check, wrong type or can't find: '" + str + "'");
+        llOwnerSay("WLV: Failed inventory check, wrong type or can't find: '" + str + "'");
         return 0;
     }
     return 1;
+}
+
+// cycles through the 8 possible combinations
+handleCommsToggle() {
+	string moves;
+	string comms;
+	string filter="";
+	
+	if (listenMode & 1) {
+		if (movesHandle == 0) {
+			movesHandle = llListen(WRESTLEHUDCHAN, "", NULL_KEY, "");
+		}
+		moves = "WLV: Moves (ON ) ";
+	} else {
+		if (movesHandle != 0) {
+			llListenRemove(movesHandle);
+			movesHandle = 0;
+		}
+		moves = "WLV: Moves (OFF) ";
+	}
+
+	if (listenMode & 2) {
+		if (commsHandle == 0) {
+			commsHandle = llListen(COMMSHUDCHAN, "", NULL_KEY, "");
+		}
+		comms = "Comms (ON ) ";
+	} else {
+		if (commsHandle != 0) {
+			llListenRemove(commsHandle);
+			commsHandle = 0;
+		}
+		comms = "Comms (OFF) ";
+	}
+
+	if (listenMode & 4) { filter = "(no filter)"; }
+	
+	llOwnerSay(moves + comms + filter);
 }
 
 default
@@ -88,7 +132,7 @@ default
         // remember who owns us
         owner = llGetOwner();
         if (llGetAttached() == 0) {
-            llOwnerSay("HUD is not attached - disabling.");
+            llOwnerSay("WLV: HUD is not attached - disabling.");
             state dead;
         }
         
@@ -98,7 +142,7 @@ default
         llOwnerSay("@version="+(string)GESTURECHAN);
 
         // start the notecard while we wait
-        llOwnerSay("Reading notecard...");
+        llOwnerSay("WLV: Reading notecard...");
         
         cardUUID = llGetInventoryKey(settingsCard);
         cardLine = 0;
@@ -127,7 +171,7 @@ default
         if (channel == GESTURECHAN) {
             if (llGetSubString(msg, 0, 9) == "Restrained") {
                 // least common case - version return
-                llOwnerSay("RLV detected.");
+                llOwnerSay("WLV: RLV detected.");
                 llSetTimerEvent(0.0);
                 gotRLV = 1;
                 if (gotSettings) {
@@ -140,7 +184,7 @@ default
     
     timer() {
         llSetTimerEvent(0.0);
-        llOwnerSay("Did not receive reply from RLV system, is it on?");
+        llOwnerSay("WLV: Did not receive reply from RLV system, is it on?");
         state dead;
     }
 
@@ -148,7 +192,7 @@ default
     dataserver(key id, string data) {
         if (id == cardHandle) {
             if (data == EOF) {
-                llOwnerSay("Notecard read complete, " + (string)llGetFreeMemory() + " bytes free.");
+                llOwnerSay("WLV: Notecard read complete, " + (string)llGetFreeMemory() + " bytes free.");
                 gotSettings = 1;
                 if (gotRLV) {
                     state main;
@@ -175,7 +219,7 @@ default
                         }
                     } else if (token == "STANDANIM") {
                         // ignore this
-                        llOwnerSay("STANDANIM is obsolete, you may remove it.");
+                        llOwnerSay("WLV: STANDANIM is obsolete, you may remove it.");
                     } else if (token == "RUNANIM") {
                         RUNANIM = value;
                         if (!checkInventory(RUNANIM, INVENTORY_ANIMATION)) {
@@ -192,8 +236,16 @@ default
                         if (!checkInventory(STANDUPANIM, INVENTORY_ANIMATION)) {
                             state dead; 
                         }
+                    } else if (token == "LISTEN") {
+						listenMode = (integer)value;
+						if (listenMode > 7) {
+							llOwnerSay("WLV: Listen value of " + (string)listenMode + " is too large, resetting to default 3.");
+							listenMode = 3;
+						} else if (listenMode == 0) {
+							llOwnerSay("WLV: Warning: Listen value read as 0 which means NO listens active.");
+						}
                     } else {
-                        llOwnerSay("Unknown token in line " + (string)cardLine + ": " + data);
+                        llOwnerSay("WLV: Unknown token in line " + (string)cardLine + ": " + data);
                         state dead;
                     }
                 }
@@ -228,7 +280,7 @@ state dead
     state_entry()
     {
         setoff();
-        llOwnerSay("Startup failed - correct and then reset all scripts");
+        llOwnerSay("WLV: Startup failed - correct and then reset all scripts");
         llSetTimerEvent(0.0);
     }
 }
@@ -262,14 +314,15 @@ state main
         if (JUMPANIM != "") { aoOn = 1;  aos += "jump "; }
         if (STANDUPANIM != "") { aoOn = 1; aos += "stand up "; }
         if (aoOn > 0) { 
-            llOwnerSay("Replacement animations defined: " + aos);
+            llOwnerSay("WLV: Replacement animations defined: " + aos);
             // get animation permissions
             llRequestPermissions(owner, PERMISSION_OVERRIDE_ANIMATIONS);
         } else {
-            llOwnerSay("No Animations defined");
+            llOwnerSay("WLV: No Animations defined");
         }
         gestureListen = llListen(GESTURECHAN, "", NULL_KEY, "");
         llSetTimerEvent(0.0);
+        handleCommsToggle();
         llOwnerSay("WLV Ready to go!");
         seton();
     }
@@ -283,7 +336,7 @@ state main
             if (JUMPANIM != "") llSetAnimationOverride("Jumping", JUMPANIM);
             if (STANDUPANIM != "") llSetAnimationOverride("Standing Up", STANDUPANIM);
         } else {
-            llOwnerSay("AO functions will not activate due to no permission.");
+            llOwnerSay("WLV: AO functions will not activate due to no permission.");
         }
     }
     
@@ -310,6 +363,18 @@ state main
                 angle -= HALFPI;
                 llOwnerSay("@setrot:" + (string)angle + "=force");
             }
+        } else if ((chan == WRESTLEHUDCHAN)||(chan == COMMSHUDCHAN)) {
+			if ((listenMode & 4) || (llSameGroup(id))) {
+                llOwnerSay("WLV: (( [" + (string)chan + " (" + llKey2Name(id) + ")] " + msg + "))");
+            }
         }
     }
+    
+    touch_start(integer cnt) {
+		listenMode--;
+		if (listenMode < 0) listenMode = 7;
+		handleCommsToggle();
+	}
+
+    
 }
