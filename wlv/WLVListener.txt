@@ -1,6 +1,7 @@
-// WLV by Sila Dione / Tursi Jackson - 105 - 8/13/2021
+// WLV by Sila Dione / Tursi Jackson - 107 - 9/20/2021
 // This integrates a Genesis (1/2/3) - compatible base AO with
 // some RLV gestures for turning, and monitors for comms/moves (63/67)
+// and a promo relay
 //
 // We work around the AO race issue by not doing a manual AO, we just use llSetAnimationOverride!
 // We don't do STAND because the way that CLEAR works makes it break pretty badly. Everything else
@@ -58,6 +59,13 @@ key cardHandle;                 // reading handle
 integer cardLine;               // reading line
 key cardUUID;                   // lets us detect that it was the notecard which changed
 
+// ** promo stuff
+string promoCard = "";
+string promoText = "";
+key promoHandle;
+integer promoLine; 
+integer promoChan = 0;
+
 // remember values
 key owner;
 
@@ -85,7 +93,7 @@ integer checkInventory(string str, integer type) {
     return 1;
 }
 
-// cycles through the 8 possible combinations
+// manages the 8 possible combinations
 handleCommsToggle() {
 	string moves;
 	string comms;
@@ -122,6 +130,15 @@ handleCommsToggle() {
 	llOwnerSay(moves + comms + filter);
 }
 
+// fetch a new line from the promo and display it
+handlePromoLine() {
+	if (llGetInventoryKey(promoCard) == NULL_KEY) {
+		llOwnerSay("WLV: Can't load promo card: " + promoCard);
+	} else {
+		promoHandle = llGetNotecardLine(promoCard, promoLine);	// 0.1s delay
+	}
+}
+
 default
 {
     state_entry()
@@ -138,7 +155,7 @@ default
         
         // ask if RLV is there
         llSetTimerEvent(30.0);
-        gestureListen = llListen(GESTURECHAN, "", NULL_KEY, "");
+        gestureListen = llListen(GESTURECHAN, "", llGetOwner(), "");
         llOwnerSay("@version="+(string)GESTURECHAN);
 
         // start the notecard while we wait
@@ -244,6 +261,12 @@ default
 						} else if (listenMode == 0) {
 							llOwnerSay("WLV: Warning: Listen value read as 0 which means NO listens active.");
 						}
+					} else if (token == "PROMOCARD") {
+						promoCard = value;
+						llOwnerSay("WLV: Registering promo card '" + promoCard);
+					} else if (token == "PROMOCHAN") {
+						promoChan = (integer)value;
+						llOwnerSay("WLV: Registering promo channel of " + (string)promoChan);
                     } else {
                         llOwnerSay("WLV: Unknown token in line " + (string)cardLine + ": " + data);
                         state dead;
@@ -320,7 +343,7 @@ state main
         } else {
             llOwnerSay("WLV: No Animations defined");
         }
-        gestureListen = llListen(GESTURECHAN, "", NULL_KEY, "");
+        gestureListen = llListen(GESTURECHAN, "", llGetOwner(), "");
         llSetTimerEvent(0.0);
         handleCommsToggle();
         llOwnerSay("WLV Ready to go!");
@@ -363,6 +386,47 @@ state main
                 angle -= HALFPI;
                 llOwnerSay("@setrot:" + (string)angle + "=force");
             }
+            // lower priority inputs from menu and promo system
+            else if (msg == "Comms") {
+				if (listenMode & 2) {
+					listenMode -= 2;
+				} else {
+					listenMode += 2;
+				}
+				handleCommsToggle();				
+			} else if (msg == "Moves") {
+				if (listenMode & 1) {
+					listenMode -= 1;
+				} else {
+					listenMode += 1;
+				}
+				handleCommsToggle();
+			} else if (msg == "Filter") {
+				if (listenMode & 4) {
+					listenMode -= 4;
+				} else {
+					listenMode += 4;
+				}
+				handleCommsToggle();
+			} else if (msg == "Promo") {
+				handlePromoLine();
+			} else if (msg == "Reset Promo") {
+				promoLine = 0;
+				llOwnerSay("WLV: Promo reset to start.");
+				handlePromoLine();
+			} else if (msg == "<<") {
+				if (promoLine > 0) promoLine--;
+				handlePromoLine();
+			} else if (msg == ">>") {
+				promoLine++;
+				handlePromoLine();
+			} else if (msg == "Shout") {
+				llShout(promoChan, promoText);
+				promoLine++;
+				handlePromoLine();
+			} else if (msg == "Cancel") {
+				// um, do nothing
+			}
         } else if ((chan == WRESTLEHUDCHAN)||(chan == COMMSHUDCHAN)) {
 			if ((listenMode & 4) || (llSameGroup(id))) {
                 llOwnerSay("WLV: (( [" + (string)chan + " (" + llKey2Name(id) + ")] " + msg + "))");
@@ -371,10 +435,31 @@ state main
     }
     
     touch_start(integer cnt) {
-		listenMode--;
-		if (listenMode < 0) listenMode = 7;
-		handleCommsToggle();
+		list btns = ["Comms","Moves","Filter"];
+		if (promoCard != "") btns += ["Promo","Reset Promo"];
+		llDialog(llDetectedKey(0), "WLV SELECT", btns, GESTURECHAN);
 	}
-
-    
+	
+    // input from the settings notecard
+    dataserver(key id, string data) {
+        if (id == promoHandle) {
+            if (data == EOF) {
+                llOwnerSay("WLV: promo complete, card ended.");
+                promoLine = 0;
+                return;
+            }
+            
+            promoText = llStringTrim(data, STRING_TRIM);
+            // skip over blank lines
+            if (promoText == "") {
+				promoLine++;
+				handlePromoLine();
+				return;
+			}
+			
+			// otherwise, we have something! Prompt the user:
+			llDialog(llGetOwner(), "WLV Promo: " + promoText, ["<<","Shout",">>","Cancel"], GESTURECHAN);
+		}
+	}
+	
 }

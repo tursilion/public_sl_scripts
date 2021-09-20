@@ -33,6 +33,17 @@ Note that RLV aiming is imprecise - you may need to manually turn a little bit a
 
 Animations will persist even if you remove the HUD. If you want to reset your animations after you remove the HUD, just wear the "Reset Animations" HUD. It will do the reset and then automatically detach.
 
+There is a built-in system for relaying promo text and the like.
+
+PROMOCARD=<name of card in inventory>
+PROMOCHAN=<channel, if not 0>
+
+Just create a card with lines of text, and drop it in. Then add this line to the settings. Click the box and select "PROMO" to start the promo system, which will display as standard SL dialogs. You will see the text that is ready to come out, and may select to say it (it will be SHOUTed), previous, next, or cancel. If you cancel, it will remember its place for next time, so you can come back to it later.
+
+For the sake of redirect and RP huds, you can also redirect to any channel with PROMOCHAN. If you don't specify this, it will be 0.
+
+The card will skip over blank lines - but they will still take time to read, so don't go overboard.
+
 Finally, there is also a built-in moves monitor that listens to both comms (63) and moves (67). By default it's on, click it to toggle. It will toggle through 8 modes that include comms or moves or both, on or off, and filtered (by group) or unfiltered. The default mode is both on, filtered. 
 
 You can change the startup mode with:
