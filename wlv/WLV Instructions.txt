@@ -1,13 +1,39 @@
-Color meaning:
-- WHITE - initializing, just wait
-- GREEN - ready to go
-- RED - Startup failed
+==========================================
+=====              WLV               =====
+==========================================
 
 This tool provides you with replacement animations like an AO, and we will use the term AO, but it's important to note that it actually uses the LL override animation function, and does not explicitly play the animations. This means it works within the system and does not conflict with moves!
 
 It also provides some RLV assists for rotations. RLV must be active in your viewer for this to work.
 
-To activate the AO, you must provide the animations that you want to use. You can provide as few or as many as you like - recommended are walk and run. The following are supported:
+Color meaning:
+- WHITE - initializing, just wait
+- GREEN - ready to go
+- RED - Startup failed
+
+If you edit the Settings notecard and save, it will automatically reset. It will also reset when you attach it or teleport.
+
+==========================================
+=====            RLV Turns           =====
+==========================================
+
+This tool provides gesture support for left and right 90 degree turns, as well as 180 degrees. Activate the included gestures to use them. By default they bind to Q, E and X, but you can change this at will by editting the gesture.
+
+As an example, a ropeshoot gesture is also included that combines the 180 degree turn with the ropeshoot animation (assumed to be loaded in your wrestle HUD). By default this is bound to space.
+
+The included gestures command the HUD to trigger RLV-based turns, so you must have RLV enabled on your viewer.
+
+Right90 and Left90 will quickly turn you 90 degrees.
+Left 180 will quickly turn you 180 degrees to the left (appropriate for ropeshoot)
+TurnRopeShoot will turn 180 degrees, then play the ropeshoot anim and sound automatically.
+
+Note that RLV aiming is imprecise - you may need to manually turn a little bit after the action to line up perfectly. In particular, there seems to be an RLV bug (at least in Firestorm) that uses different base rotations for left turns and right turns. So when practical, you may want to stick mostly to left turns - when you alternate it seems to produce a smaller turn.
+
+==========================================
+=====               AO               =====
+==========================================
+
+To activate the AO, you must provide the animations that you want to use. You can provide as few or as many as you like - recommended are just walk and run. The following are supported:
 
 WALKANIM = 
 RUNANIM = 
@@ -18,31 +44,38 @@ Drop the animation into the HUD and fill in the name as appropriate. Put a # in 
 
 WALKANIM = dz401-Walk.N
 RUNANIM = dz281-Running
-JUMPANIM = dz427-Jump.N
-STANDUPANIM = dz429-Land.N (Adult)
+#JUMPANIM = 
+#STANDUPANIM = 
 
-NOTE: Most wrestling animations run at priority 4, so you need to use priority 3 or lower to avoid conflicting with moves. Since there's no stand override, this applies only to moving during a move. An easy way to test is to use the roll and make sure moving after you start the roll doesn't interrupt it.
+NOTE: Most wrestling animations run at priority 4, so you need to use priority 3 or lower to avoid conflicting with moves. Since there's no stand override, this applies only to moving during a move. An easy way to test is to use the roll and move with it - the walk animation should not interrupt the roll. If it does, you must use a different animation.
 
-The included gestures command the HUD to trigger RLV-based turns, so you must have RLV enabled on your viewer.
+You can also see priorities if you turn on Developer->Avatar->Animation Info... but note that most animations you have added will show as UUID, so you will need to sort out which is which.
 
-Right90 and Left90 will quickly turn you 90 degrees.
-Left 180 will quickly turn you 180 degrees to the left (appropriate for ropeshoot)
-TurnRopeShoot will turn 180 degrees, then play the ropeshoot anim and sound automatically.
+Animations will persist even if you remove the HUD. If you want to reset your animations after you remove the HUD, just wear the "Reset Animations" HUD. It will do the reset on click and then automatically detach.
 
-Note that RLV aiming is imprecise - you may need to manually turn a little bit after the action to line up perfectly. In particular, there seems to be an RLV bug (at least in Firestorm) that uses different base rotations for left turns and right turns. So when practical, you may want to stick mostly to left turns - when you alternate it seems to produce a smaller turn.
+==========================================
+=====            Promo               =====
+==========================================
 
-Animations will persist even if you remove the HUD. If you want to reset your animations after you remove the HUD, just wear the "Reset Animations" HUD. It will do the reset and then automatically detach.
-
-There is a built-in system for relaying promo text and the like.
+There is a built-in system for relaying promo text.
 
 PROMOCARD=<name of card in inventory>
-PROMOCHAN=<channel, if not 0>
+PROMOCHAN=<channel, if not 0 (optional)>
+PROMONAME=<name to use, if not your display name (optional)>
 
-Just create a card with lines of text, and drop it in. Then add this line to the settings. Click the box and select "PROMO" to start the promo system, which will display as standard SL dialogs. You will see the text that is ready to come out, and may select to say it (it will be SHOUTed), previous, next, or cancel. If you cancel, it will remember its place for next time, so you can come back to it later.
+Just create a card with lines of text, and drop it in. Then add PROMOCARD to the settings. Click the box and select "PROMO" to start the promo system, which will display as standard SL dialogs. You will see the text that is ready to come out, and may select to say it (it will be SHOUTed), previous, next, or ignore. If you ignore, it will remember its place for next time, so you can come back to it later.
 
-For the sake of redirect and RP huds, you can also redirect to any channel with PROMOCHAN. If you don't specify this, it will be 0.
+For each line, a message box (with no timeout) will appear. Click "<<" to go back a line, click ">>" to skip ahead a line, and click "Shout" to shout the current line.
+
+For the sake of redirect and RP huds, or SFX, you can also redirect to any channel with PROMOCHAN. If you don't specify this, it will be 0.
 
 The card will skip over blank lines - but they will still take time to read, so don't go overboard.
+
+By default the script will pull your display name. If you want a different name to be used, then add it in PROMONAME.
+
+==========================================
+=====        Comms Monitor           =====
+==========================================
 
 Finally, there is also a built-in moves monitor that listens to both comms (63) and moves (67). By default it's on, click it to toggle. It will toggle through 8 modes that include comms or moves or both, on or off, and filtered (by group) or unfiltered. The default mode is both on, filtered. 
 
@@ -54,3 +87,18 @@ The number indicates the default setting, and can be from 0 to 7. Just add the v
 - to listen to moves on 67, add 1
 - to listen to comms on 63, add 2
 - to disable the group filter and listen to anyone on those channels, add 4
+
+==========================================
+=====            TLDR                =====
+==========================================
+
+When you click it, you'll get a menu. Should be relatively self explanatory, but:
+
+Comms: Turn listening to the comms channel 63 on and off
+Moves: Turn listenind to the moves channel 67 on and off
+Filter: Turn the group filter for comms and moves on and off
+
+AO: Turn AO on and off. YOU SHOULD NOT NEED TO DO THIS as long as your anims are priority 3 or lower! (only appears if AO defined)
+
+Promo: Start or continue your promo notecard (only appears if a promo is defined)
+Reset Promo: Reset the promo notecard back to the first line

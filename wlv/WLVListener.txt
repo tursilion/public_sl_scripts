@@ -38,6 +38,8 @@ integer gestureListen = 0;
 // track our state
 integer gotSettings = 0;
 integer gotRLV = 0;
+integer gotAO = -1;
+integer aoOn = 0;
 
 // these hold the AO animations to actually use
 string WALKANIM;
@@ -48,7 +50,7 @@ string STANDUPANIM;
 // comms/moves monitors
 #define COMMSHUDCHAN 63     // channel for comms (for listening only, normally 63)
 #define WRESTLEHUDCHAN 67   // normally 67, for ring in gestures and move monitor
-integer listenMode = 3;		// bit 0 = moves, bit 1 = comms, bit 2 = no filter
+integer listenMode = 3;        // bit 0 = moves, bit 1 = comms, bit 2 = no filter
 integer commsHandle=0;      // holds the listen handle for comms
 integer movesHandle=0;      // holds the listen handle for moves
 
@@ -62,6 +64,8 @@ key cardUUID;                   // lets us detect that it was the notecard which
 // ** promo stuff
 string promoCard = "";
 string promoText = "";
+string promoName = "";
+string originalName = "";
 key promoHandle;
 integer promoLine; 
 integer promoChan = 0;
@@ -93,50 +97,73 @@ integer checkInventory(string str, integer type) {
     return 1;
 }
 
+stopAO() {
+    llResetAnimationOverride("ALL");
+    if (aoOn) llOwnerSay("AO disabled.");
+    aoOn = 0;
+}
+
+startAO() {
+    string aos = "";
+    
+    if (gotAO < 0) {
+        llOwnerSay("No AO defined!");
+        aoOn = 0;
+        return;
+    }
+    if (WALKANIM != "") { aos += "Walk "; llSetAnimationOverride("Walking", WALKANIM); }
+    if (RUNANIM != "") { aos += "Run "; llSetAnimationOverride("Running", RUNANIM); }
+    if (JUMPANIM != "") { aos += "Jump "; llSetAnimationOverride("Jumping", JUMPANIM); }
+    if (STANDUPANIM != "") { aos += "Get up"; llSetAnimationOverride("Standing Up", STANDUPANIM); }
+    
+    llOwnerSay("AOs activated: " + aos);
+    aoOn = 1;
+}
+
 // manages the 8 possible combinations
 handleCommsToggle() {
-	string moves;
-	string comms;
-	string filter="";
-	
-	if (listenMode & 1) {
-		if (movesHandle == 0) {
-			movesHandle = llListen(WRESTLEHUDCHAN, "", NULL_KEY, "");
-		}
-		moves = "WLV: Moves (ON ) ";
-	} else {
-		if (movesHandle != 0) {
-			llListenRemove(movesHandle);
-			movesHandle = 0;
-		}
-		moves = "WLV: Moves (OFF) ";
-	}
+    string moves;
+    string comms;
+    string filter="";
+    
+    if (listenMode & 1) {
+        if (movesHandle == 0) {
+            movesHandle = llListen(WRESTLEHUDCHAN, "", NULL_KEY, "");
+        }
+        moves = "WLV: Moves (ON ) ";
+    } else {
+        if (movesHandle != 0) {
+            llListenRemove(movesHandle);
+            movesHandle = 0;
+        }
+        moves = "WLV: Moves (OFF) ";
+    }
 
-	if (listenMode & 2) {
-		if (commsHandle == 0) {
-			commsHandle = llListen(COMMSHUDCHAN, "", NULL_KEY, "");
-		}
-		comms = "Comms (ON ) ";
-	} else {
-		if (commsHandle != 0) {
-			llListenRemove(commsHandle);
-			commsHandle = 0;
-		}
-		comms = "Comms (OFF) ";
-	}
+    if (listenMode & 2) {
+        if (commsHandle == 0) {
+            commsHandle = llListen(COMMSHUDCHAN, "", NULL_KEY, "");
+        }
+        comms = "Comms (ON ) ";
+    } else {
+        if (commsHandle != 0) {
+            llListenRemove(commsHandle);
+            commsHandle = 0;
+        }
+        comms = "Comms (OFF) ";
+    }
 
-	if (listenMode & 4) { filter = "(no filter)"; }
-	
-	llOwnerSay(moves + comms + filter);
+    if (listenMode & 4) { filter = "(no filter)"; }
+    
+    llOwnerSay(moves + comms + filter);
 }
 
 // fetch a new line from the promo and display it
 handlePromoLine() {
-	if (llGetInventoryKey(promoCard) == NULL_KEY) {
-		llOwnerSay("WLV: Can't load promo card: " + promoCard);
-	} else {
-		promoHandle = llGetNotecardLine(promoCard, promoLine);	// 0.1s delay
-	}
+    if (llGetInventoryKey(promoCard) == NULL_KEY) {
+        llOwnerSay("WLV: Can't load promo card: " + promoCard);
+    } else {
+        promoHandle = llGetNotecardLine(promoCard, promoLine);    // 0.1s delay
+    }
 }
 
 default
@@ -152,6 +179,8 @@ default
             llOwnerSay("WLV: HUD is not attached - disabling.");
             state dead;
         }
+        promoName = llGetDisplayName(owner);
+        originalName = llGetObjectName();
         
         // ask if RLV is there
         llSetTimerEvent(30.0);
@@ -254,19 +283,22 @@ default
                             state dead; 
                         }
                     } else if (token == "LISTEN") {
-						listenMode = (integer)value;
-						if (listenMode > 7) {
-							llOwnerSay("WLV: Listen value of " + (string)listenMode + " is too large, resetting to default 3.");
-							listenMode = 3;
-						} else if (listenMode == 0) {
-							llOwnerSay("WLV: Warning: Listen value read as 0 which means NO listens active.");
-						}
-					} else if (token == "PROMOCARD") {
-						promoCard = value;
-						llOwnerSay("WLV: Registering promo card '" + promoCard);
-					} else if (token == "PROMOCHAN") {
-						promoChan = (integer)value;
-						llOwnerSay("WLV: Registering promo channel of " + (string)promoChan);
+                        listenMode = (integer)value;
+                        if (listenMode > 7) {
+                            llOwnerSay("WLV: Listen value of " + (string)listenMode + " is too large, resetting to default 3.");
+                            listenMode = 3;
+                        } else if (listenMode == 0) {
+                            llOwnerSay("WLV: Warning: Listen value read as 0 which means NO listens active.");
+                        }
+                    } else if (token == "PROMOCARD") {
+                        promoCard = value;
+                        llOwnerSay("WLV: Registering promo card '" + promoCard + "'");
+                    } else if (token == "PROMOCHAN") {
+                        promoChan = (integer)value;
+                        llOwnerSay("WLV: Registering promo channel of " + (string)promoChan);
+                    } else if (token == "PROMONAME") {
+                        promoName = value;
+                        llOwnerSay("WLV: Using promo name of '" + promoName + "'");
                     } else {
                         llOwnerSay("WLV: Unknown token in line " + (string)cardLine + ": " + data);
                         state dead;
@@ -330,13 +362,12 @@ state main
 
     state_entry()
     {
-        integer aoOn = -1;
         string aos;
-        if (WALKANIM != "") { aoOn = 1; aos += "walk "; }
-        if (RUNANIM != "") { aoOn = 1; aos += "run "; }
-        if (JUMPANIM != "") { aoOn = 1;  aos += "jump "; }
-        if (STANDUPANIM != "") { aoOn = 1; aos += "stand up "; }
-        if (aoOn > 0) { 
+        if (WALKANIM != "") { gotAO = 1; aos += "walk "; }
+        if (RUNANIM != "") { gotAO = 1; aos += "run "; }
+        if (JUMPANIM != "") { gotAO = 1;  aos += "jump "; }
+        if (STANDUPANIM != "") { gotAO = 1; aos += "stand up "; }
+        if (gotAO > 0) { 
             llOwnerSay("WLV: Replacement animations defined: " + aos);
             // get animation permissions
             llRequestPermissions(owner, PERMISSION_OVERRIDE_ANIMATIONS);
@@ -353,13 +384,11 @@ state main
     // comes here after state_entry's request for animation permissions, finish up if we get them
     run_time_permissions(integer p) {
         if (p & PERMISSION_OVERRIDE_ANIMATIONS) {
-            llResetAnimationOverride("ALL");
-            if (WALKANIM != "") llSetAnimationOverride("Walking", WALKANIM);
-            if (RUNANIM != "") llSetAnimationOverride("Running", RUNANIM);
-            if (JUMPANIM != "") llSetAnimationOverride("Jumping", JUMPANIM);
-            if (STANDUPANIM != "") llSetAnimationOverride("Standing Up", STANDUPANIM);
+            stopAO();
+            startAO();
         } else {
             llOwnerSay("WLV: AO functions will not activate due to no permission.");
+            gotAO = -1;
         }
     }
     
@@ -388,58 +417,64 @@ state main
             }
             // lower priority inputs from menu and promo system
             else if (msg == "Comms") {
-				if (listenMode & 2) {
-					listenMode -= 2;
-				} else {
-					listenMode += 2;
-				}
-				handleCommsToggle();				
-			} else if (msg == "Moves") {
-				if (listenMode & 1) {
-					listenMode -= 1;
-				} else {
-					listenMode += 1;
-				}
-				handleCommsToggle();
-			} else if (msg == "Filter") {
-				if (listenMode & 4) {
-					listenMode -= 4;
-				} else {
-					listenMode += 4;
-				}
-				handleCommsToggle();
-			} else if (msg == "Promo") {
-				handlePromoLine();
-			} else if (msg == "Reset Promo") {
-				promoLine = 0;
-				llOwnerSay("WLV: Promo reset to start.");
-				handlePromoLine();
-			} else if (msg == "<<") {
-				if (promoLine > 0) promoLine--;
-				handlePromoLine();
-			} else if (msg == ">>") {
-				promoLine++;
-				handlePromoLine();
-			} else if (msg == "Shout") {
-				llShout(promoChan, promoText);
-				promoLine++;
-				handlePromoLine();
-			} else if (msg == "Cancel") {
-				// um, do nothing
-			}
+                if (listenMode & 2) {
+                    listenMode -= 2;
+                } else {
+                    listenMode += 2;
+                }
+                handleCommsToggle();                
+            } else if (msg == "Moves") {
+                if (listenMode & 1) {
+                    listenMode -= 1;
+                } else {
+                    listenMode += 1;
+                }
+                handleCommsToggle();
+            } else if (msg == "Filter") {
+                if (listenMode & 4) {
+                    listenMode -= 4;
+                } else {
+                    listenMode += 4;
+                }
+                handleCommsToggle();
+            } else if (msg == "AO") {
+                if (aoOn) {
+                    stopAO();
+                } else {
+                    startAO();
+                }
+            } else if (msg == "Promo") {
+                handlePromoLine();
+            } else if (msg == "Reset Promo") {
+                promoLine = 0;
+                llOwnerSay("WLV: Promo reset to start.");
+            } else if (msg == "<<") {
+                if (promoLine > 0) promoLine--;
+                handlePromoLine();
+            } else if (msg == ">>") {
+                promoLine++;
+                handlePromoLine();
+            } else if (msg == "Shout") {
+                llSetObjectName(promoName);
+                    llShout(promoChan, promoText);
+                llSetObjectName(originalName);
+                promoLine++;
+                handlePromoLine();
+            }
         } else if ((chan == WRESTLEHUDCHAN)||(chan == COMMSHUDCHAN)) {
-			if ((listenMode & 4) || (llSameGroup(id))) {
+            if ((listenMode & 4) || (llSameGroup(id))) {
                 llOwnerSay("WLV: (( [" + (string)chan + " (" + llKey2Name(id) + ")] " + msg + "))");
             }
         }
     }
     
     touch_start(integer cnt) {
-		list btns = ["Comms","Moves","Filter"];
-		if (promoCard != "") btns += ["Promo","Reset Promo"];
-		llDialog(llDetectedKey(0), "WLV SELECT", btns, GESTURECHAN);
-	}
-	
+        list btns = ["Comms","Moves","Filter"];
+        if (gotAO > 0) btns += ["AO"];
+        if (promoCard != "") btns += ["Promo","Reset Promo"];
+        llDialog(llDetectedKey(0), "WLV SELECT", btns, GESTURECHAN);
+    }
+    
     // input from the settings notecard
     dataserver(key id, string data) {
         if (id == promoHandle) {
@@ -452,14 +487,14 @@ state main
             promoText = llStringTrim(data, STRING_TRIM);
             // skip over blank lines
             if (promoText == "") {
-				promoLine++;
-				handlePromoLine();
-				return;
-			}
-			
-			// otherwise, we have something! Prompt the user:
-			llDialog(llGetOwner(), "WLV Promo: " + promoText, ["<<","Shout",">>","Cancel"], GESTURECHAN);
-		}
-	}
-	
+                promoLine++;
+                handlePromoLine();
+                return;
+            }
+            
+            // otherwise, we have something! Prompt the user:
+            llDialog(llGetOwner(), "WLV Promo: " + promoText, ["<<","Shout",">>"], GESTURECHAN);
+        }
+    }
+    
 }
