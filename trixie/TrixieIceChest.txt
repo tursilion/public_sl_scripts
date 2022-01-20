@@ -1,0 +1,195 @@
+// Trixie's ice sleeve. Fades in and out, fades in with a sparkle effect on command.
+
+integer channel = -7;
+float speed = 0.025;
+
+float visibility;
+// sparkle particles
+key image = "bdd55733-13dd-df5b-9128-90c3b13f6570";
+
+setVisibility(float vis)
+{
+    integer idx;
+    integer max=llGetNumberOfPrims();
+    if (max == 1) {
+        llSetLinkAlpha(0, vis, ALL_SIDES);
+    } else {
+        for (idx=1; idx<=max; idx++) {
+            llSetLinkAlpha(idx, vis, ALL_SIDES);
+        }
+    }        
+}
+
+default
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        llParticleSystem([]);
+        state invisible;
+    }
+}
+
+state visible
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        setVisibility(1.0);
+        llParticleSystem([]);
+        llListen(channel, "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        if (msg == "capestarayt") {
+            // no answer, but no error either, but reset
+            state invisible;
+        } else if (msg == "capeiceayt") {
+            // no answer, but no error either, but reset
+            state invisible;
+        } else if (msg == "capetuxayt") {
+            // no answer, but no error either, but reset
+            state invisible;
+        } else if (msg == "capegoice") {
+            llOwnerSay("Got 'capegoice' in state visible");
+        } else if (msg == "capegostars") {
+            state fadeout;
+        } else if (msg == "capegotux") {
+            state fadeout;
+        } else if (msg == "capearm1") {
+            // no answer, but no error either
+        } else if (msg == "capearm2") {
+            // no answer, but no error either
+        } else if (msg == "capearm3") {
+            // no answer, but no error either
+        } else if (msg == "capearm4") {
+            // no answer, but no error either
+        } else {
+            llOwnerSay("Got bad message '" + msg + "' in state visible");
+        }
+    }
+}
+
+state fadeout
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        visibility=1.0;
+        llSetTimerEvent(0.1);
+    }
+    
+    timer()
+    {
+        visibility -= speed;
+        if (visibility <= 0.0) {
+            llSetTimerEvent(0.0);
+            state invisible;
+        }
+        setVisibility(visibility);
+    }
+}
+
+state invisible
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        setVisibility(0.0);
+        llParticleSystem([]);
+        llListen(channel, "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        if (msg == "capestarayt") {
+            // no answer, but no error either
+        } else if (msg == "capeiceayt") {
+            // no answer, but no error either
+        } else if (msg == "capetuxayt") {
+            // no answer, but no error either
+        } else if (msg == "capegostars") {
+            // no answer, but no error either
+        } else if (msg == "capegoice") {
+            state fadein;
+        } else if (msg == "capegotux") {
+            // no answer, but no error either
+        } else if (msg == "capearm1") {
+            // no answer, but no error either
+        } else if (msg == "capearm2") {
+            // no answer, but no error either
+        } else if (msg == "capearm3") {
+            // no answer, but no error either
+        } else if (msg == "capearm4") {
+            // no answer, but no error either
+        } else {
+            llOwnerSay("Got bad message '" + msg + "' in state invisible");
+        }
+    }
+}
+
+    
+state fadein
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        visibility=0.0;
+        llSetTimerEvent(0.1);
+        llParticleSystem([ 
+            PSYS_PART_FLAGS,
+                PSYS_PART_EMISSIVE_MASK |
+                PSYS_PART_INTERP_COLOR_MASK |
+                PSYS_PART_INTERP_SCALE_MASK,
+            PSYS_SRC_PATTERN,
+                PSYS_SRC_PATTERN_EXPLODE,
+            PSYS_PART_START_COLOR, <1, 1, 1>,
+            PSYS_PART_END_COLOR, <1, 1, 1>,
+            PSYS_SRC_BURST_PART_COUNT, 20,
+            PSYS_SRC_BURST_RATE, 0.1,
+            PSYS_SRC_BURST_RADIUS, 0.1,
+            PSYS_PART_START_SCALE, <0.4, 0.4, 0.4>,
+            PSYS_PART_END_SCALE, <0.01, 0.01, 0.01>,
+            PSYS_PART_START_ALPHA, 1.0,
+            PSYS_PART_END_ALPHA, 0.5,
+            PSYS_PART_MAX_AGE, 0.8,
+            PSYS_SRC_BURST_SPEED_MAX, 0.2,
+            PSYS_SRC_BURST_SPEED_MIN, 0.05,
+            PSYS_SRC_TEXTURE, image,
+            PSYS_SRC_ACCEL, <0.1, 0.0, -0.5>
+        ]);
+    }
+    
+    timer()
+    {
+        visibility += speed;
+        if (visibility >= 1.0) {
+            llSetTimerEvent(0.0);
+            llParticleSystem([]);
+            state visible;
+        }
+        setVisibility(visibility);
+    }
+}
+

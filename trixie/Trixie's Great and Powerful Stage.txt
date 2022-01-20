@@ -1,0 +1,909 @@
+// Animation script by Tursi.
+// probably should have done this by script rather than by hand.... ;)
+
+// test mode steps the animation once for every click. Not test mode doesn't.
+integer testmode = 0;
+// rate is how often the animation advances. There are 5 steps.
+float rate = 0.3;
+
+// variables to track the various linked parts so that I don't
+// need to worry about link indexes changing
+integer frontwall=-1;
+integer stageright=-1;
+integer stageleft=-1;
+integer leginleft=-1;
+integer leginright=-1;
+integer legleft=-1;
+integer legright=-1;
+integer roof1=-1;
+integer roof2=-1;
+integer rightsidewall=-1;
+integer leftsidewall=-1;
+integer rightsidetop=-1;
+integer leftsidetop=-1;
+integer flagpole=-1;
+integer flagsphere=-1;
+integer flag=-1;
+integer curtainleft=-1;
+integer curtainright=-1;
+integer cannonleft=-1;
+integer cannonright=-1;
+integer cannon1left=-1;
+integer cannon1right=-1;
+integer cannon2left=-1;
+integer cannon2right=-1;
+integer cannon3left=-1;
+integer cannon3right=-1;
+integer rocketpole=-1;
+integer rocketbody=-1;
+integer rocketnose=-1;
+integer wheel=-1;
+integer wheelpole=-1;
+integer sign=-1;
+integer signpoleleft=-1;
+integer signpoleright=-1;
+integer planetpole=-1;
+integer planet=-1;
+integer star1=-1;
+integer star2=-1;
+integer star3=-1;
+integer yoke1=-1;
+integer yoke2=-1;
+integer glassleft=-1;       // glass left and glass right are backwards, darn it
+integer glassright=-1;
+integer flameleft=-1;
+integer flameright=-1;
+integer sparks1=-1;
+integer sparks2=-1;
+integer sparks3=-1;
+integer sparks4=-1;
+integer mirror=-1;
+integer pillow=-1;
+integer smoke=-1;
+integer showstart=-1;
+integer innercircle=-1;
+integer outercircle=-1;
+integer wallcircle=-1;
+integer hat=-1;
+integer icepose=-1;
+integer poseluna=-1;
+integer posecelestia=-1;
+
+// state indexes (so I only need to change one place to insert)
+integer S_CLOSED = 0;
+integer S_DROPWALL = 1;
+integer S_OPENFLAPS = 2;
+integer S_OPENSIDES = 3;
+integer S_OPENROOF = 4;
+integer S_DISPLAYSIGNS = 5;
+
+// state maximum (debug?)
+integer maxstate = 5;
+
+vector legcolor=<.4,.294,.157>;
+
+// animation settings
+vector pos_frontwall_up=<1.00818, 0.00664, 0.00022>;
+rotation rot_frontwall_up=<0.00000, 1.00000, 0.00000, 0.00000>;
+rotation rot_frontwall_down=<0.00000, -0.70711, 0.00000, 0.70711>;
+
+rotation rot_stageright_open=<0.50002, -0.50002, 0.49998, 0.49998>;
+rotation rot_stageright_down=<-0.50000, 0.50000, 0.50002, 0.49998>;
+rotation rot_stageright_packed=<-0.70712, -0.00001, 0.00001, 0.70710>;
+vector pos_stageright_down=<2.00769, 1.99364, 0.00327>;
+vector pos_stageright_packed=<0.95525, 1.99933, 0.97866>;
+
+rotation rot_stageleft_open=<-0.50000, 0.50000, 0.50002, 0.49998>;
+rotation rot_stageleft_down=<0.49998, -0.50002, 0.50000, 0.50000>;
+rotation rot_stageleft_packed=<-0.00001, 0.70712, -0.70710, 0.00000>;
+vector pos_stageleft_down=<2.00941, -1.97914, 0.00574>;
+vector pos_stageleft_packed=<0.95886, -1.99805, 0.96963>;
+
+rotation rot_leginleft_open=<-0.00000, -0.00000, 0.70711, 0.70711>;
+rotation rot_leginleft_down=<0.50000, -0.50000, 0.50000, 0.50000>;
+rotation rot_leginleft_packed=<0.50000, -0.50000, 0.50000, 0.50000>;
+vector pos_leginleft_down=<2.85480, -1.25368, -0.00757>;
+vector pos_leginleft_packed=<1.00950, -1.25368, 0.10056>;
+
+rotation rot_leginright_open=<-0.00000, -0.00000, 0.70711, 0.70711>;
+rotation rot_leginright_down=<-0.50000, 0.50000, 0.50000, 0.50000>;
+rotation rot_leginright_packed=<-0.50000, 0.50000, 0.50000, 0.50000>;
+vector pos_leginright_down=<2.85484, 1.29959, -0.00761>;
+vector pos_leginright_packed=<1.00954, 1.29959, 0.10051>;
+
+rotation rot_legright_deployed=<-0.00000, -0.00000, 0.70711, 0.70711>;
+rotation rot_legright_folded=<-0.50000, 0.50000, 0.50000, 0.50000>;
+rotation rot_legright_hidden=<-0.50000, 0.50000, 0.50000, 0.50000>;
+vector pos_legright_deployed=<2.85687, 3.77652, 0.00849>;
+vector pos_legright_folded=<2.85687, 3.77652, 0.00849>;
+vector pos_legright_hidden=<0.93247, 1.94519, 0.00849>;
+
+rotation rot_legleft_deployed=<-0.00000, -0.00000, 0.70711, 0.70711>;
+rotation rot_legleft_folded=<0.50000, -0.50000, 0.50000, 0.50000>;
+rotation rot_legleft_hidden=<0.50000, -0.50000, 0.50000, 0.50000>;
+vector pos_legleft_deployed=<2.85683, -3.78384, 0.01190>;
+vector pos_legleft_folded=<2.85683, -3.78384, 0.01190>;
+vector pos_legleft_hidden=<0.89151, -1.95218, 0.01190>;
+
+rotation rot_roof1_closed=<0.00000, 0.83147, 0.00000, 0.55557>;
+rotation rot_roof2_closed=<0.00000, -0.83147, 0.00000, 0.55557>;
+vector pos_roof1_closed=<1.40933, 0.00975, 1.86688>;
+vector pos_roof2_closed=<-1.31498, 0.00945, 1.86628>;
+
+rotation rot_roof1_open=<-0.00000, 0.19509, -0.00000, 0.98079>;
+rotation rot_roof2_open=<-0.00000, 0.98079, -0.00000, 0.19507>;
+vector pos_roof1_open=<-1.07481, 0.00975, 4.49226>;
+vector pos_roof2_open=<-1.07425, 0.00945, 1.76796>;
+
+rotation rot_rightsidewall_closed=<0.50000, -0.50000, -0.50000, 0.50000>;
+vector pos_rightsidewall_closed=<-1.07137, 1.94005, 0.96508>;
+rotation rot_rightsidetop_closed=<0.50000, -0.50000, -0.50000, 0.50000>;
+vector pos_rightsidetop_closed=<-1.07137, 1.94005, 2.22555>;
+rotation rot_leftsidewall_closed=<0.50000, -0.50000, -0.50000, 0.50000>;
+vector pos_leftsidewall_closed=<-1.07137, -1.94040, 0.96509>;
+rotation rot_leftsidetop_closed=<0.50000, -0.50000, -0.50000, 0.50000>;
+vector pos_leftsidetop_closed=<-1.07140, -1.94040, 2.21320>;
+
+rotation rot_rightsidewall_open=<0.70711, 0.00000, 0.00000, 0.70711>;
+vector pos_rightsidewall_open=<-1.07137, 1.94005, 0.96508>;
+rotation rot_rightsidetop_open=<0.70711, 0.00000, 0.00000, 0.70711>;
+vector pos_rightsidetop_open=<-1.07137, 1.94005, 2.22854>;
+rotation rot_leftsidewall_open=<0.00000, 0.70711, 0.70711, 0.00000>;
+vector pos_leftsidewall_open=<-1.07137, -1.94040, 0.96509>;
+rotation rot_leftsidetop_open=<0.00000, 0.70711, 0.70711, 0.00000>;
+vector pos_leftsidetop_open=<-1.07137, -1.94040, 2.22214>;
+
+rotation rot_flagpole_closed=<0.51292, -0.51295, 0.48672, 0.48672>;
+rotation rot_flagsphere_closed=<0.00000, 0.70711, 0.00000, 0.70711>;
+rotation rot_flag_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+vector pos_flagpole_closed=<0.05350, 2.23068, 2.30785>;
+vector pos_flagsphere_closed=<0.04725, 3.24149, 2.36692>;
+vector pos_flag_closed=<0.04994, 2.61232, 1.92007>;
+
+rotation rot_flagpole_open=<0.72541, -0.00002, 0.68832, 0.00000>;
+rotation rot_flagsphere_open=<-0.50000, 0.50000, 0.50000, 0.50000>;
+rotation rot_flag_open=<-0.00000, -0.00000, 0.70711, 0.70711>;
+vector pos_flagpole_open=<-1.40556, 3.10469, 2.30785>;
+vector pos_flagsphere_open=<-2.41636, 3.09843, 2.36692>;
+vector pos_flag_open=<-1.78719, 3.10114, 1.92007>;
+
+rotation rot_curtainright_open=<0.69352, 0.13795, 0.13795, 0.69352>;
+rotation rot_curtainleft_open=<0.13795, 0.69352, 0.69352, 0.13795>;
+rotation rot_curtainright_closed=<0.00000, 0.70711, 0.70711, 0.00000>;
+rotation rot_curtainleft_closed=<0.70711, 0.00000, 0.00000, 0.70711>;
+vector pos_curtainright_closed=<0.77334, 1.97478, 1.01164>;
+vector pos_curtainleft_closed=<0.77334, -1.97664, 1.01164>;
+
+rotation rot_cannonright_open=<0.00000, 0.00000, 0.00000, 1.00000>;
+vector pos_cannonright_open=<-0.09996, 2.80087, 0.05870>;
+rotation rot_cannon3right_open=<0.76323, 0.00000, 0.00000, 0.64612>;
+vector pos_cannon3right_open=<-0.09048, 3.26888, 0.21545>;
+rotation rot_cannon2right_open=<0.87462, 0.00000, 0.00000, 0.48481>;
+vector pos_cannon2right_open=<-0.09048, 3.28624, 0.39672>;
+rotation rot_cannon1right_open=<0.95240, 0.00000, 0.00000, 0.30486>;
+vector pos_cannon1right_open=<-0.09048, 3.14444, 0.48326>;
+rotation rot_cannonleft_open=<0.00000, -0.00000, 1.00000, 0.00000>;
+vector pos_cannonleft_open=<-0.08458, -2.76657, 0.05870>;
+rotation rot_cannon3left_open=<0.00000, 0.76323, 0.64613, 0.00000>;
+vector pos_cannon3left_open=<-0.09406, -3.23457, 0.21545>;
+rotation rot_cannon2left_open=<0.00000, 0.87462, 0.48481, 0.00000>;
+vector pos_cannon2left_open=<-0.09406, -3.25194, 0.39672>;
+rotation rot_cannon1left_open=<0.00000, 0.95240, 0.30486, 0.00000>;
+vector pos_cannon1left_open=<-0.09406, -3.11014, 0.48326>;
+
+rotation rot_cannonright_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+vector pos_cannonright_closed=<0.25498, 1.48953, 0.05870>;
+rotation rot_cannonleft_closed=<0.00000, -0.00000, 1.00000, 0.00000>;
+vector pos_cannonleft_closed=<0.27725, -1.49080, 0.05870>;
+rotation rot_cannon1left_closed=<0.00000, 0.93512, -0.35433, 0.00000>;
+rotation rot_cannon2left_closed=<0.00000, 0.98628, -0.16507, 0.00000>;
+rotation rot_cannon3left_closed=<-0.00007, 0.99953, 0.03053, 0.00000>;
+rotation rot_cannon3right_closed=<0.99923, 0.00000, 0.00000, 0.03926>;
+rotation rot_cannon2right_closed=<-0.98769, -0.00000, -0.00000, 0.15643>;
+rotation rot_cannon1right_closed=<-0.93819, 0.00000, 0.00000, 0.34611>;
+vector pos_cannon1left_closed=<0.26777, -1.21220, 0.38910>;
+vector pos_cannon2left_closed=<0.26777, -1.32842, 0.50779>;
+vector pos_cannon3left_closed=<0.26777, -1.48698, 0.44521>;
+vector pos_cannon3right_closed=<0.26447, 1.47174, 0.53817>;
+vector pos_cannon2right_closed=<0.26447, 1.33899, 0.58282>;
+vector pos_cannon1right_closed=<0.26447, 1.21899, 0.45525>;
+
+rotation rot_rocketpole_open=<-0.07846, 0.00000, 0.00000, 0.99692>;
+vector pos_rocketpole_open=<0.56616, 1.63312, 1.68399>;
+vector size_rocketpole_open=<0.10000, 0.10000, 3.33486>;
+rotation rot_rocketbody_open=<-0.63368, 0.05544, -0.06725, 0.76867>;
+vector pos_rocketbody_open=<0.63699, 2.23456, 3.52765>;
+rotation rot_rocketnose_open=<-0.63368, 0.05544, -0.06725, 0.76867>;
+vector pos_rocketnose_open=<0.68311, 2.49130, 3.58787>;
+rotation rot_rocketpole_closed=<0.00000, -0.04362, 0.00000, 0.99905>;
+vector pos_rocketpole_closed=<0.43430, 0.98621, 0.88220>;
+vector size_rocketpole_closed=<0.10000, 0.10000, 1.73129>;
+rotation rot_rocketbody_closed=<-0.70341, 0.04884, -0.07218, 0.70542>;
+vector pos_rocketbody_closed=<0.41853, 1.37569, 1.83905>;
+rotation rot_rocketnose_closed=<-0.70341, 0.04884, -0.07218, 0.70542>;
+vector pos_rocketnose_closed=<0.46465, 1.63918, 1.84995>;
+
+rotation rot_wheel_open=<-0.70318, -0.69571, -0.10500, 0.10249>;
+vector pos_wheel_open=<0.77550, -2.11084, 2.88456>;
+rotation rot_wheelpole_open=<-0.00706, 0.21577, -0.96049, 0.17566>;
+vector pos_wheelpole_open=<0.54790, -1.45740, 1.43790>;
+vector size_wheelpole_open=<0.10000, 0.10000, 3.25670>;
+
+rotation rot_wheelpole_mid=<0.00662, 0.02808, -0.98452, 0.17287>;
+vector pos_wheelpole_mid=<0.51800, -1.24470, 1.38640>;
+vector size_wheelpole_mid=<0.10000, 0.10000, 2.86385>;
+rotation rot_wheel_mid=<0.70935, 0.69632, -0.03423, 0.10390>;
+vector pos_wheel_mid=<0.59145, -1.31174, 2.89828>;
+
+rotation rot_wheel_closed=<-0.70318, -0.69571, -0.10500, 0.10249>;
+vector pos_wheel_closed=<0.66104, -0.03442, 1.27371>;
+rotation rot_wheelpole_closed=<-0.09908, -0.32600, -0.92888, 0.14521>;
+vector pos_wheelpole_closed=<0.51506, -0.49458, 0.61794>;
+vector size_wheelpole_closed=<0.10000, 0.10000, 1.58540>;
+
+vector pos_sign_open=<0.63467, 0.01259, 2.39245>;
+vector pos_signpoleleft_open=<0.58470, -1.02090, 1.29350>;
+vector pos_signpoleright_open=<0.58470, 1.05060, 1.29410>;
+vector size_signpoleleft_open=<0.10000, 0.10000, 2.69954>;
+vector size_signpoleright_open=<0.10000, 0.10000, 2.69817>;
+
+rotation rot_sign_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+rotation rot_signpoleleft_closed=<0.00000, 0.00000, 0.38268, 0.92388>;
+rotation rot_signpoleright_closed=<0.00000, 0.00000, 0.38268, 0.92388>;
+vector size_signpoleleft_closed=<0.10000, 0.10000, 1.85911>;
+vector size_signpoleright_closed=<0.10000, 0.10000, 1.86239>;
+vector pos_signpoleright_closed=<0.58470, 1.05060, 0.87720>;
+vector pos_signpoleleft_closed=<0.58470, -1.02090, 0.87880>;
+vector pos_sign_closed=<0.63467, 0.01259, 1.61750>;
+
+vector pos_star1_open=<0.45037, -0.90183, 4.26830>;
+vector pos_star2_open=<0.45037, -0.02341, 4.42523>;
+vector pos_star3_open=<0.45037, 0.88425, 4.27447>;
+
+rotation rot_planetpole_mid=<0.13053, 0.00000, 0.00000, 0.99144>;
+vector pos_planetpole_mid=<0.43569, 0.58008, 2.06082>;
+vector size_planetpole_mid=<0.10000, 0.10000, 4.18066>;
+vector pos_planet_mid=<0.47491, 0.02187, 3.40277>;
+vector pos_star3_mid=<0.45037, 0.34608, 3.87939>;
+vector pos_star2_mid=<0.45037, -0.02341, 3.86569>;
+vector pos_star1_mid=<0.45037, -0.31035, 3.91932>;
+
+rotation rot_planet_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+vector pos_planet_closed=<0.47491, 0.02187, 0.80793>;
+rotation rot_planetpole_closed=<0.49809, 0.00000, 0.00000, 0.86712>;
+vector pos_planetpole_closed= <0.43570, 0.51570, 0.34310>;
+vector size_planetpole_closed=<0.10000, 0.10000, 1.20127>;
+rotation rot_star1_closed=<0.29028, 0.00000, 0.00000, 0.95694>;
+vector pos_star1_closed=<0.45037, -0.31035, 0.85750>;
+rotation rot_star2_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+vector pos_star2_closed=<0.45037, -0.02341, 0.80388>;
+rotation rot_star3_closed=<-0.29028, 0.00000, 0.00000, 0.95694>;
+vector pos_star3_closed=<0.45037, 0.34608, 0.81757>;
+
+rotation rot_yoke1_closed=<-0.66264, 0.00000, 0.00000, 0.74893>;
+vector pos_yoke1_closed=<0.01459, 2.65859, 0.08945>;
+rotation rot_yoke2_closed=<0.08005, -0.70256, -0.08005, 0.70256>;
+vector pos_yoke2_closed=<0.01410, 3.42390, 0.29520>;
+
+rotation rot_yoke1_open=<-0.46856, -0.46856, 0.52958, 0.52958>;
+vector pos_yoke1_open=<-1.77416, 2.96109, 0.06503>;
+rotation rot_yoke2_open=<0.54166, -0.45456, 0.45450, 0.54166>;
+vector pos_yoke2_open=<-2.53803, 2.96252, 0.26372>;
+
+rotation rot_glassleft_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+vector pos_glassleft_closed=<0.00346, 1.93852, 1.17876>;
+rotation rot_glassright_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+vector pos_glassright_closed=<0.00346, -1.93909, 1.17876>;
+
+rotation rot_glassleft_open=<0.00000, 0.00000, 0.70711, 0.70711>;
+vector pos_glassleft_open=<-1.06820, 3.01451, 1.17876>;
+rotation rot_glassright_open=<0.00000, 0.00000, -0.70711, 0.70711>;
+vector pos_glassright_open=<-1.07070, -3.02540, 1.17880>;
+
+vector pos_flameleft_open=<2.91139, -3.45490, 1.56826>;
+vector pos_flameright_open=<2.91139, 3.50655, 1.56827>;
+vector pos_sparks1_open=<2.86111, -2.90598, 0.04957>;
+vector pos_sparks2_open=<2.86111, 2.96346, 0.04957>;
+vector pos_sparks3_open=<2.86111, -1.24814, 0.04957>;
+vector pos_sparks4_open=<2.86111, 1.29894, 0.04957>;
+
+rotation rot_flameleft_closed=<-0.70711, -0.70711, -0.00036, 0.00024>;
+rotation rot_flameright_closed=<-0.70711, -0.70711, -0.00036, 0.00024>;
+rotation rot_sparks1_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+rotation rot_sparks2_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+rotation rot_sparks3_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+rotation rot_sparks4_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+
+vector pos_flameleft_closed=<0.94427, -0.99591, 0.56387>;
+vector pos_flameright_closed=<0.84350, 1.01531, 0.66700>;
+vector pos_sparks1_closed=<0.72908, -0.12273, 0.04957>;
+vector pos_sparks2_closed=<0.72908, -0.12273, 0.04957>;
+vector pos_sparks3_closed=<0.72908, -0.12273, 0.04957>;
+vector pos_sparks4_closed=<0.72908, -0.12273, 0.04957>;
+
+vector pos_smoke_open=<2.12896, 0.01854, 0.01765>;
+rotation rot_smoke_closed=<0.00000, 0.00000, 0.00000, 1.00000>;
+vector pos_smoke_closed=<0.73278, 0.01854, 0.01765>;
+
+rotation rot_showstart_open=<0.00000, 0.00000, -0.47718, 0.87881>;
+vector pos_showstart_open=<2.07165, -0.07648, -0.10510>;
+rotation rot_showstart_close=<0.00000, 0.00000, -0.70711, 0.70711>;
+vector pos_showstart_close=<-0.32110, -0.98891, -0.10510>;
+rotation rot_showstart_staging=<0.70708, 0.70714, 0.00000, 0.00000>;
+vector pos_showstart_staging=<-0.32110, -0.98891, -1.24281>;
+
+vector size_wall_down=<1.89964, 1.89964, 0.01000>;
+vector size_wall_med=<1.89964, 1.89964, 0.8>;
+vector size_wall_up=<1.89964, 1.89964, 1.47756>;
+vector pos_outercircle_open=<2.01891, -1.70303, 0.06844>;
+vector pos_innercircle_open=<2.01994, -1.70049, 0.08696>;
+vector pos_wallcircle_open=<2.01994, -1.70049, 0.74714>;
+vector pos_outercircle_close=<-0.03542, -1.70049, 0.00669>;
+vector pos_innercircle_close=<-0.03542, -1.70049, 0.00669>;
+vector pos_wallcircle_close=<-0.03542, -1.70049, 0.00669>;
+
+vector size_hat_full=<0.52453, 0.55909, 0.38818>;
+rotation rot_hat_open=<0.04354, 0.00000, 0.00000, 0.99905>;
+vector   pos_hat_open=<2.03632, -1.69664, 0.26635>;
+rotation rot_hat_closed=<1.00000, 0.00000, 0.00000, 0.00000>;
+vector   pos_hat_closed=<-0.25510, -1.69664, -0.13103>;
+
+vector pos_icepose_open=<-2.89479, 0.00134, 6.43630>;
+vector pos_icepose_closed=<-1.02608, 0.00134, 0.06664>;
+
+vector pos_poseluna_open=<2.52333, 1.57042, 0.05661>;
+vector pos_poseluna_closed=<0.91273, 1.57042, 0.05661>;
+
+vector pos_posecelestia_open=<2.52333, -1.44096, 0.06244>;
+vector pos_posecelestia_closed=<0.91273, -1.44096, 0.06244>;
+
+// Trixie's stage
+integer status=0;
+integer doorstatus = 0;
+integer direction = 1;
+
+ringsout() {
+    float num;
+    
+    // make the hat visible immediately, and bring out the rings
+    llSetLinkPrimitiveParamsFast(hat, [PRIM_ROT_LOCAL, rot_hat_open, PRIM_POS_LOCAL, pos_hat_open, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 1.0, PRIM_SIZE, size_hat_full]);
+
+    llSetLinkPrimitiveParamsFast(innercircle, [PRIM_POS_LOCAL, pos_innercircle_open]);
+    llSetLinkPrimitiveParamsFast(outercircle, [PRIM_POS_LOCAL, pos_outercircle_open]);
+    llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_POS_LOCAL, pos_wallcircle_open]);
+    
+    // wait a few seconds for the audience to see the hat, and Trixie to remove hers
+    llSleep(5.0);
+
+    // light up the circles and 'melt' the hat
+    for (num=0.0; num < 1.0; num+=0.1) {
+        llSetLinkPrimitiveParamsFast(innercircle, [PRIM_GLOW, ALL_SIDES, num/5.0, PRIM_COLOR, 0, <1.0,1.0,1.0>, num]);
+        vector tmpsize = size_hat_full;
+        tmpsize.z = size_hat_full.z * (1.0-num);
+        llSetLinkPrimitiveParamsFast(hat, [PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 1.0-num, PRIM_SIZE, tmpsize]);
+        llSleep(0.05);
+    }
+    llSetLinkPrimitiveParamsFast(hat, [PRIM_COLOR, 0, <1.0,1.0,1.0>, 0.0]);
+    for (num=0.0; num < 1.0; num+=0.1) {
+        llSetLinkPrimitiveParamsFast(outercircle, [PRIM_GLOW, ALL_SIDES, num/5.0, PRIM_COLOR, 0, <1.0,1.0,1.0>, num]);
+        llSleep(0.05);
+    }
+   
+    // flip up the wall - just snap it since moving it will be painful
+    llSleep(0.8);
+    llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_GLOW, ALL_SIDES, 0.2, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.2]);
+    llSleep(0.1);
+    llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_SIZE, size_wall_med]);
+    llSleep(0.1);
+    llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_SIZE, size_wall_up]);
+    
+    // and done
+}
+
+ringsaway() {
+    float num;
+    
+    // hat can hide immediately
+    llSetLinkPrimitiveParamsFast(hat, [PRIM_ROT_LOCAL, rot_hat_closed, PRIM_POS_LOCAL, pos_hat_closed, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0, PRIM_SIZE, size_hat_full*0.1]);
+    
+    // bring it all back down
+    llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_SIZE, size_wall_med]);
+    llSleep(0.1);
+    llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_SIZE, size_wall_down]);
+    llSleep(0.4);
+    llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+    
+    for (num=1.0; num >= 0.0; num-=0.1) {
+        llSetLinkPrimitiveParamsFast(outercircle, [PRIM_GLOW, ALL_SIDES, num/5.0, PRIM_COLOR, 0, <1.0,1.0,1.0>, num]);
+        llSetLinkPrimitiveParamsFast(innercircle, [PRIM_GLOW, ALL_SIDES, num/5.0, PRIM_COLOR, 0, <1.0,1.0,1.0>, num]);
+        llSleep(0.05);
+    }
+
+    llSetLinkPrimitiveParamsFast(outercircle, [PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+    llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+    llSetLinkPrimitiveParamsFast(innercircle, [PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+
+    llSleep(0.2);
+
+    llSetLinkPrimitiveParamsFast(innercircle, [PRIM_POS_LOCAL, pos_innercircle_close]);
+    llSetLinkPrimitiveParamsFast(outercircle, [PRIM_POS_LOCAL, pos_outercircle_close]);
+    llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_POS_LOCAL, pos_wallcircle_close]);
+}    
+
+processstate() {
+    if (status == S_CLOSED) {
+        // final close
+        llSetLinkPrimitiveParamsFast(frontwall, [PRIM_ROT_LOCAL, rot_frontwall_up]);
+        llSetLinkPrimitiveParamsFast(stageright, [PRIM_ROT_LOCAL, rot_stageright_packed, PRIM_POS_LOCAL, pos_stageright_packed, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+        llSetLinkPrimitiveParamsFast(stageleft, [PRIM_ROT_LOCAL, rot_stageleft_packed, PRIM_POS_LOCAL, pos_stageleft_packed, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+        llSetLinkPrimitiveParamsFast(leginleft, [PRIM_ROT_LOCAL, rot_leginleft_packed, PRIM_POS_LOCAL, pos_leginleft_packed, PRIM_COLOR, ALL_SIDES, legcolor, 0.0]);
+        llSetLinkPrimitiveParamsFast(leginright, [PRIM_ROT_LOCAL, rot_leginright_packed, PRIM_POS_LOCAL, pos_leginright_packed, PRIM_COLOR, ALL_SIDES, legcolor, 0.0]);
+        llSetLinkPrimitiveParamsFast(flameleft, [PRIM_POS_LOCAL, pos_flameleft_closed]);
+        llSetLinkPrimitiveParamsFast(flameright, [PRIM_POS_LOCAL, pos_flameright_closed]);
+        llSetLinkPrimitiveParamsFast(sparks1, [PRIM_POS_LOCAL, pos_sparks1_closed]);
+        llSetLinkPrimitiveParamsFast(sparks2, [PRIM_POS_LOCAL, pos_sparks2_closed]);
+        llSetLinkPrimitiveParamsFast(sparks3, [PRIM_POS_LOCAL, pos_sparks3_closed]);
+        llSetLinkPrimitiveParamsFast(sparks4, [PRIM_POS_LOCAL, pos_sparks4_closed]);
+        llSetLinkPrimitiveParamsFast(smoke, [PRIM_POS_LOCAL, pos_smoke_closed]);
+        llSetLinkPrimitiveParamsFast(showstart, [PRIM_ROT_LOCAL, rot_showstart_close, PRIM_POS_LOCAL, pos_showstart_close]);
+        
+        llSetLinkPrimitiveParamsFast(innercircle, [PRIM_POS_LOCAL, pos_innercircle_close, PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+        llSetLinkPrimitiveParamsFast(outercircle, [PRIM_POS_LOCAL, pos_outercircle_close, PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+        llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_POS_LOCAL, pos_wallcircle_close, PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0, PRIM_SIZE, size_wall_down]);
+        llSetLinkPrimitiveParamsFast(hat, [PRIM_ROT_LOCAL, rot_hat_closed, PRIM_POS_LOCAL, pos_hat_closed, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0, PRIM_SIZE, size_hat_full*0.1]);
+
+        llSetLinkPrimitiveParamsFast(icepose, [PRIM_POS_LOCAL, pos_icepose_closed]);
+        llSetLinkPrimitiveParamsFast(poseluna, [PRIM_POS_LOCAL, pos_poseluna_closed]);
+        llSetLinkPrimitiveParamsFast(posecelestia, [PRIM_POS_LOCAL, pos_posecelestia_closed]);
+
+    } else if (status == S_DROPWALL) {
+        // open wall
+        llSetLinkPrimitiveParamsFast(frontwall, [PRIM_ROT_LOCAL, rot_frontwall_down]);
+        llSetLinkPrimitiveParamsFast(stageright, [PRIM_ROT_LOCAL, rot_stageright_down, PRIM_POS_LOCAL, pos_stageright_down, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 1.0]);
+        llSetLinkPrimitiveParamsFast(stageleft, [PRIM_ROT_LOCAL, rot_stageleft_down, PRIM_POS_LOCAL, pos_stageleft_down, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 1.0]);
+        llSetLinkPrimitiveParamsFast(leginleft, [PRIM_ROT_LOCAL, rot_leginleft_down, PRIM_POS_LOCAL, pos_leginleft_down]);
+        llSetLinkPrimitiveParamsFast(leginright, [PRIM_ROT_LOCAL, rot_leginright_down, PRIM_POS_LOCAL, pos_leginright_down]);
+        llSetLinkPrimitiveParamsFast(legleft, [PRIM_ROT_LOCAL, rot_legleft_hidden, PRIM_POS_LOCAL, pos_legleft_hidden, PRIM_COLOR, ALL_SIDES, legcolor, 0.0]);
+        llSetLinkPrimitiveParamsFast(legright, [PRIM_ROT_LOCAL, rot_legright_hidden, PRIM_POS_LOCAL, pos_legright_hidden, PRIM_COLOR, ALL_SIDES, legcolor, 0.0]);  
+        llSetLinkPrimitiveParamsFast(flameleft, [PRIM_POS_LOCAL, pos_flameleft_open]);
+        llSetLinkPrimitiveParamsFast(flameright, [PRIM_POS_LOCAL, pos_flameright_open]);
+        llSetLinkPrimitiveParamsFast(sparks1, [PRIM_POS_LOCAL, pos_sparks1_open]);
+        llSetLinkPrimitiveParamsFast(sparks2, [PRIM_POS_LOCAL, pos_sparks2_open]);
+        llSetLinkPrimitiveParamsFast(sparks3, [PRIM_POS_LOCAL, pos_sparks3_open]);
+        llSetLinkPrimitiveParamsFast(sparks4, [PRIM_POS_LOCAL, pos_sparks4_open]);
+        llSetLinkPrimitiveParamsFast(smoke, [PRIM_POS_LOCAL, pos_smoke_open]);
+
+        llSetLinkPrimitiveParamsFast(icepose, [PRIM_POS_LOCAL, pos_icepose_open]);
+        llSetLinkPrimitiveParamsFast(poseluna, [PRIM_POS_LOCAL, pos_poseluna_open]);
+        llSetLinkPrimitiveParamsFast(posecelestia, [PRIM_POS_LOCAL, pos_posecelestia_open]);
+    
+    } else if (status == S_OPENFLAPS) {
+        // open stage flaps and inner legs
+        llSetLinkPrimitiveParamsFast(stageright, [PRIM_ROT_LOCAL, rot_stageright_open]);
+        llSetLinkPrimitiveParamsFast(stageleft, [PRIM_ROT_LOCAL, rot_stageleft_open]);
+        llSetLinkPrimitiveParamsFast(leginleft, [PRIM_ROT_LOCAL, rot_leginleft_open, PRIM_COLOR, ALL_SIDES, legcolor, 1.0]);            
+        llSetLinkPrimitiveParamsFast(leginright, [PRIM_ROT_LOCAL, rot_leginright_open, PRIM_COLOR, ALL_SIDES, legcolor, 1.0]);       
+        llSetLinkPrimitiveParamsFast(legleft, [PRIM_ROT_LOCAL, rot_legleft_folded, PRIM_POS_LOCAL, pos_legleft_folded]);
+        llSetLinkPrimitiveParamsFast(legright, [PRIM_ROT_LOCAL, rot_legright_folded, PRIM_POS_LOCAL, pos_legright_folded]);       
+        llSetLinkPrimitiveParamsFast(rightsidewall, [PRIM_ROT_LOCAL, rot_rightsidewall_closed, PRIM_POS_LOCAL, pos_rightsidewall_closed]);
+        llSetLinkPrimitiveParamsFast(rightsidetop, [PRIM_ROT_LOCAL, rot_rightsidetop_closed, PRIM_POS_LOCAL, pos_rightsidetop_closed]);
+        llSetLinkPrimitiveParamsFast(leftsidewall, [PRIM_ROT_LOCAL, rot_leftsidewall_closed, PRIM_POS_LOCAL, pos_leftsidewall_closed]);
+        llSetLinkPrimitiveParamsFast(leftsidetop, [PRIM_ROT_LOCAL, rot_leftsidetop_closed, PRIM_POS_LOCAL, pos_leftsidetop_closed]);
+        llSetLinkPrimitiveParamsFast(glassright, [PRIM_ROT_LOCAL, rot_glassright_closed, PRIM_POS_LOCAL, pos_glassright_closed]);
+        llSetLinkPrimitiveParamsFast(glassleft, [PRIM_ROT_LOCAL, rot_glassleft_closed, PRIM_POS_LOCAL, pos_glassleft_closed]);
+
+        llSetLinkPrimitiveParamsFast(flagpole, [PRIM_ROT_LOCAL, rot_flagpole_closed, PRIM_POS_LOCAL, pos_flagpole_closed]);
+        llSetLinkPrimitiveParamsFast(flagsphere, [PRIM_ROT_LOCAL, rot_flagsphere_closed, PRIM_POS_LOCAL, pos_flagsphere_closed]);
+        llSetLinkPrimitiveParamsFast(flag, [PRIM_ROT_LOCAL, rot_flag_closed, PRIM_POS_LOCAL, pos_flag_closed]);
+        llSetLinkPrimitiveParamsFast(curtainleft, [PRIM_ROT_LOCAL, rot_curtainleft_closed]);
+        llSetLinkPrimitiveParamsFast(curtainright, [PRIM_ROT_LOCAL, rot_curtainright_closed]);
+        llSetLinkPrimitiveParamsFast(cannonright, [PRIM_ROT_LOCAL, rot_cannonright_closed, PRIM_POS_LOCAL, pos_cannonright_closed]);
+        llSetLinkPrimitiveParamsFast(cannon1right, [PRIM_ROT_LOCAL, rot_cannon1right_closed, PRIM_POS_LOCAL, pos_cannon1right_closed]);
+        llSetLinkPrimitiveParamsFast(cannon2right, [PRIM_ROT_LOCAL, rot_cannon2right_closed, PRIM_POS_LOCAL, pos_cannon2right_closed]);
+        llSetLinkPrimitiveParamsFast(cannon3right, [PRIM_ROT_LOCAL, rot_cannon3right_closed, PRIM_POS_LOCAL, pos_cannon3right_closed]);
+        llSetLinkPrimitiveParamsFast(cannonleft, [PRIM_ROT_LOCAL, rot_cannonleft_closed, PRIM_POS_LOCAL, pos_cannonleft_closed]);
+        llSetLinkPrimitiveParamsFast(cannon1left, [PRIM_ROT_LOCAL, rot_cannon1left_closed, PRIM_POS_LOCAL, pos_cannon1left_closed]);
+        llSetLinkPrimitiveParamsFast(cannon2left, [PRIM_ROT_LOCAL, rot_cannon2left_closed, PRIM_POS_LOCAL, pos_cannon2left_closed]);
+        llSetLinkPrimitiveParamsFast(cannon3left, [PRIM_ROT_LOCAL, rot_cannon3left_closed, PRIM_POS_LOCAL, pos_cannon3left_closed]);
+        llSetLinkPrimitiveParamsFast(yoke1, [PRIM_ROT_LOCAL, rot_yoke1_closed, PRIM_POS_LOCAL, pos_yoke1_closed]);
+        llSetLinkPrimitiveParamsFast(yoke2, [PRIM_ROT_LOCAL, rot_yoke2_closed, PRIM_POS_LOCAL, pos_yoke2_closed]);
+        
+    } else if (status == S_OPENSIDES) {
+        llSetLinkPrimitiveParamsFast(legleft, [PRIM_ROT_LOCAL, rot_legleft_deployed, PRIM_COLOR, ALL_SIDES, legcolor, 1.0]);
+        llSetLinkPrimitiveParamsFast(legright, [PRIM_ROT_LOCAL, rot_legright_deployed, PRIM_COLOR, ALL_SIDES, legcolor, 1.0]);       
+        llSetLinkPrimitiveParamsFast(roof1, [PRIM_ROT_LOCAL, rot_roof1_closed, PRIM_POS_LOCAL, pos_roof1_closed]);
+        llSetLinkPrimitiveParamsFast(roof2, [PRIM_ROT_LOCAL, rot_roof2_closed, PRIM_POS_LOCAL, pos_roof2_closed]);
+        llSetLinkPrimitiveParamsFast(rightsidewall, [PRIM_ROT_LOCAL, rot_rightsidewall_open, PRIM_POS_LOCAL, pos_rightsidewall_open]);
+        llSetLinkPrimitiveParamsFast(rightsidetop, [PRIM_ROT_LOCAL, rot_rightsidetop_open, PRIM_POS_LOCAL, pos_rightsidetop_open]);
+        llSetLinkPrimitiveParamsFast(leftsidewall, [PRIM_ROT_LOCAL, rot_leftsidewall_open, PRIM_POS_LOCAL, pos_leftsidewall_open]);
+        llSetLinkPrimitiveParamsFast(leftsidetop, [PRIM_ROT_LOCAL, rot_leftsidetop_open, PRIM_POS_LOCAL, pos_leftsidetop_open]);
+        llSetLinkPrimitiveParamsFast(glassright, [PRIM_ROT_LOCAL, rot_glassright_open, PRIM_POS_LOCAL, pos_glassright_open]);
+        llSetLinkPrimitiveParamsFast(glassleft, [PRIM_ROT_LOCAL, rot_glassleft_open, PRIM_POS_LOCAL, pos_glassleft_open]);
+        llSetLinkPrimitiveParamsFast(yoke1, [PRIM_ROT_LOCAL, rot_yoke1_open, PRIM_POS_LOCAL, pos_yoke1_open]);
+        llSetLinkPrimitiveParamsFast(yoke2, [PRIM_ROT_LOCAL, rot_yoke2_open, PRIM_POS_LOCAL, pos_yoke2_open]);
+        llSetLinkPrimitiveParamsFast(flagpole, [PRIM_ROT_LOCAL, rot_flagpole_open, PRIM_POS_LOCAL, pos_flagpole_open]);
+        llSetLinkPrimitiveParamsFast(flagsphere, [PRIM_ROT_LOCAL, rot_flagsphere_open, PRIM_POS_LOCAL, pos_flagsphere_open]);
+        llSetLinkPrimitiveParamsFast(flag, [PRIM_ROT_LOCAL, rot_flag_open, PRIM_POS_LOCAL, pos_flag_open]);
+        llSetLinkPrimitiveParamsFast(curtainleft, [PRIM_ROT_LOCAL, rot_curtainleft_open]);
+        llSetLinkPrimitiveParamsFast(curtainright, [PRIM_ROT_LOCAL, rot_curtainright_open]);
+        llSetLinkPrimitiveParamsFast(cannonright, [PRIM_ROT_LOCAL, rot_cannonright_open, PRIM_POS_LOCAL, pos_cannonright_open]);
+        llSetLinkPrimitiveParamsFast(cannon1right, [PRIM_ROT_LOCAL, rot_cannon1right_open, PRIM_POS_LOCAL, pos_cannon1right_open]);
+        llSetLinkPrimitiveParamsFast(cannon2right, [PRIM_ROT_LOCAL, rot_cannon2right_open, PRIM_POS_LOCAL, pos_cannon2right_open]);
+        llSetLinkPrimitiveParamsFast(cannon3right, [PRIM_ROT_LOCAL, rot_cannon3right_open, PRIM_POS_LOCAL, pos_cannon3right_open]);
+        llSetLinkPrimitiveParamsFast(cannonleft, [PRIM_ROT_LOCAL, rot_cannonleft_open, PRIM_POS_LOCAL, pos_cannonleft_open]);
+        llSetLinkPrimitiveParamsFast(cannon1left, [PRIM_ROT_LOCAL, rot_cannon1left_open, PRIM_POS_LOCAL, pos_cannon1left_open]);
+        llSetLinkPrimitiveParamsFast(cannon2left, [PRIM_ROT_LOCAL, rot_cannon2left_open, PRIM_POS_LOCAL, pos_cannon2left_open]);
+        llSetLinkPrimitiveParamsFast(cannon3left, [PRIM_ROT_LOCAL, rot_cannon3left_open, PRIM_POS_LOCAL, pos_cannon3left_open]);
+        llSetLinkPrimitiveParamsFast(rocketbody, [PRIM_ROT_LOCAL, rot_rocketbody_closed, PRIM_POS_LOCAL, pos_rocketbody_closed]);
+        llSetLinkPrimitiveParamsFast(rocketnose, [PRIM_ROT_LOCAL, rot_rocketnose_closed, PRIM_POS_LOCAL, pos_rocketnose_closed]);
+        llSetLinkPrimitiveParamsFast(rocketpole, [PRIM_ROT_LOCAL, rot_rocketpole_closed, PRIM_POS_LOCAL, pos_rocketpole_closed, PRIM_SIZE, size_rocketpole_closed]);
+        llSetLinkPrimitiveParamsFast(wheel, [PRIM_ROT_LOCAL, rot_wheel_closed, PRIM_POS_LOCAL, pos_wheel_closed, PRIM_TEXT, "", <1.0,1.0,1.0>, 0.5]);
+        llSetLinkPrimitiveParamsFast(wheelpole, [PRIM_ROT_LOCAL, rot_wheelpole_closed, PRIM_POS_LOCAL, pos_wheelpole_closed, PRIM_SIZE, size_wheelpole_closed]);
+        llSetLinkPrimitiveParamsFast(planet, [PRIM_ROT_LOCAL, rot_planet_closed, PRIM_POS_LOCAL, pos_planet_closed]);
+        llSetLinkPrimitiveParamsFast(planetpole, [PRIM_ROT_LOCAL, rot_planetpole_closed, PRIM_POS_LOCAL, pos_planetpole_closed, PRIM_SIZE, size_planetpole_closed]);
+        llSetLinkPrimitiveParamsFast(star1, [PRIM_ROT_LOCAL, rot_star1_closed, PRIM_POS_LOCAL, pos_star1_closed]);
+        llSetLinkPrimitiveParamsFast(star2, [PRIM_ROT_LOCAL, rot_star2_closed, PRIM_POS_LOCAL, pos_star2_closed]);
+        llSetLinkPrimitiveParamsFast(star3, [PRIM_ROT_LOCAL, rot_star3_closed, PRIM_POS_LOCAL, pos_star3_closed]);
+
+    } else if (status == S_OPENROOF) {
+        llSetLinkPrimitiveParamsFast(roof1, [PRIM_ROT_LOCAL, rot_roof1_open, PRIM_POS_LOCAL, pos_roof1_open]);
+        llSetLinkPrimitiveParamsFast(roof2, [PRIM_ROT_LOCAL, rot_roof2_open, PRIM_POS_LOCAL, pos_roof2_open]);
+        llSetLinkPrimitiveParamsFast(rocketbody, [PRIM_ROT_LOCAL, rot_rocketbody_open, PRIM_POS_LOCAL, pos_rocketbody_open]);
+        llSetLinkPrimitiveParamsFast(rocketnose, [PRIM_ROT_LOCAL, rot_rocketnose_open, PRIM_POS_LOCAL, pos_rocketnose_open]);
+        llSetLinkPrimitiveParamsFast(rocketpole, [PRIM_ROT_LOCAL, rot_rocketpole_open, PRIM_POS_LOCAL, pos_rocketpole_open, PRIM_SIZE, size_rocketpole_open]);
+        llSetLinkPrimitiveParamsFast(wheel, [PRIM_ROT_LOCAL, rot_wheel_mid, PRIM_POS_LOCAL, pos_wheel_mid]);
+        llSetLinkPrimitiveParamsFast(wheelpole, [PRIM_ROT_LOCAL, rot_wheelpole_mid, PRIM_POS_LOCAL, pos_wheelpole_mid, PRIM_SIZE, size_wheelpole_mid]);
+        llSetLinkPrimitiveParamsFast(sign, [PRIM_ROT_LOCAL, rot_sign_closed, PRIM_POS_LOCAL, pos_sign_closed]);
+        llSetLinkPrimitiveParamsFast(signpoleleft, [PRIM_ROT_LOCAL, rot_signpoleleft_closed, PRIM_POS_LOCAL, pos_signpoleleft_closed, PRIM_SIZE, size_signpoleleft_closed]);
+        llSetLinkPrimitiveParamsFast(signpoleright, [PRIM_ROT_LOCAL, rot_signpoleright_closed, PRIM_POS_LOCAL, pos_signpoleright_closed, PRIM_SIZE, size_signpoleright_closed]);
+        llSetLinkPrimitiveParamsFast(planet, [PRIM_POS_LOCAL, pos_planet_mid]);
+        llSetLinkPrimitiveParamsFast(planetpole, [PRIM_ROT_LOCAL, rot_planetpole_mid, PRIM_POS_LOCAL, pos_planetpole_mid, PRIM_SIZE, size_planetpole_mid]);
+        llSetLinkPrimitiveParamsFast(star1, [PRIM_POS_LOCAL, pos_star1_mid]);
+        llSetLinkPrimitiveParamsFast(star2, [PRIM_POS_LOCAL, pos_star2_mid]);
+        llSetLinkPrimitiveParamsFast(star3, [PRIM_POS_LOCAL, pos_star3_mid]);
+
+    } else if (status == S_DISPLAYSIGNS) {
+        llSetLinkPrimitiveParamsFast(wheel, [PRIM_ROT_LOCAL, rot_wheel_open, PRIM_POS_LOCAL, pos_wheel_open]);
+        llSetLinkPrimitiveParamsFast(wheelpole, [PRIM_ROT_LOCAL, rot_wheelpole_open, PRIM_POS_LOCAL, pos_wheelpole_open, PRIM_SIZE, size_wheelpole_open]);
+        llSetLinkPrimitiveParamsFast(sign, [PRIM_POS_LOCAL, pos_sign_open]);
+        llSetLinkPrimitiveParamsFast(signpoleleft, [PRIM_POS_LOCAL, pos_signpoleleft_open, PRIM_SIZE, size_signpoleleft_open]);
+        llSetLinkPrimitiveParamsFast(signpoleright, [PRIM_POS_LOCAL, pos_signpoleright_open, PRIM_SIZE, size_signpoleright_open]);
+        llSetLinkPrimitiveParamsFast(star1, [PRIM_POS_LOCAL, pos_star1_open]);
+        llSetLinkPrimitiveParamsFast(star2, [PRIM_POS_LOCAL, pos_star2_open]);
+        llSetLinkPrimitiveParamsFast(star3, [PRIM_POS_LOCAL, pos_star3_open]);
+
+    }
+}
+
+
+default
+{
+    // detect when I build and rescan links
+    // this is only useful when building, disabled now so
+    // that sitting and unsitting doesn't reset the stage
+//    changed(integer change) 
+//    {
+//        if (change & CHANGED_LINK) {
+//            llResetScript();
+//        }
+//    }
+    
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        // locate the various parts that we need to work with
+        llOwnerSay("Looking for parts...");
+        
+        if (llGetLinkName(1) != "Trixie's Stage") {
+            llOwnerSay("Root prim is not named 'Trixie's Stage' - the floor prim MUST stay root! Disabled.");
+            state inactive;
+            return;
+        }
+          
+        integer cnt = llGetObjectPrimCount(llGetKey());
+        while (cnt > 0) {
+            string tst = llGetLinkName(cnt);
+            if (tst == "frontwall") frontwall=cnt;
+            if (tst == "stageright") stageright=cnt;
+            if (tst == "stageleft") stageleft=cnt;
+            if (tst == "leginleft") leginleft=cnt;
+            if (tst == "leginright") leginright=cnt;
+            if (tst == "roof1") roof1=cnt;
+            if (tst == "roof2") roof2=cnt;
+            if (tst == "legleft") legleft=cnt;
+            if (tst == "legright") legright=cnt;
+            if (tst == "rightsidewall") rightsidewall=cnt;
+            if (tst == "rightsidetop") rightsidetop=cnt;
+            if (tst == "leftsidewall") leftsidewall=cnt;
+            if (tst == "leftsidetop") leftsidetop=cnt;
+            if (tst == "flagpole") flagpole=cnt;
+            if (tst == "flagsphere") flagsphere=cnt;
+            if (tst == "flag") flag=cnt;
+            if (tst == "curtainleft") curtainleft=cnt;
+            if (tst == "curtainright") curtainright=cnt;
+            if (tst == "cannonleft") cannonleft=cnt;
+            if (tst == "cannonright") cannonright=cnt;
+            if (tst == "cannon1left") cannon1left=cnt;
+            if (tst == "cannon1right") cannon1right=cnt;
+            if (tst == "cannon2left") cannon2left=cnt;
+            if (tst == "cannon2right") cannon2right=cnt;
+            if (tst == "cannon3left") cannon3left=cnt;
+            if (tst == "cannon3right") cannon3right=cnt;
+            if (tst == "rocketpole") rocketpole=cnt;
+            if (tst == "rocketnose") rocketnose=cnt;
+            if (tst == "rocketbody") rocketbody=cnt;
+            if (tst == "wheel") wheel=cnt;
+            if (tst == "wheelpole") wheelpole=cnt;
+            if (tst == "sign") sign=cnt;
+            if (tst == "signpoleleft") signpoleleft=cnt;
+            if (tst == "signpoleright") signpoleright=cnt;
+            if (tst == "planetpole") planetpole=cnt;
+            if (tst == "planet") planet=cnt;
+            if (tst == "star1") star1=cnt;
+            if (tst == "star2") star2=cnt;
+            if (tst == "star3") star3=cnt;
+            if (tst == "yoke1") yoke1=cnt;
+            if (tst == "yoke2") yoke2=cnt;
+            if (tst == "privacyglassleft") glassleft=cnt;
+            if (tst == "privacyglassright") glassright=cnt;
+            if (tst == "flamel") flameleft=cnt;
+            if (tst == "flamer") flameright=cnt;
+            if (tst == "sparks1") sparks1=cnt;
+            if (tst == "sparks2") sparks2=cnt;
+            if (tst == "sparks3") sparks3=cnt;
+            if (tst == "sparks4") sparks4=cnt;
+            if (tst == "mirror") mirror=cnt;
+            if (tst == "pillow") pillow=cnt;
+            if (tst == "smoke") smoke=cnt;
+            if (tst == "showstart") showstart=cnt;
+            if (tst == "innercircle") innercircle=cnt;
+            if (tst == "outercircle") outercircle=cnt;
+            if (tst == "wallcircle") wallcircle=cnt;
+            if (tst == "hat") hat=cnt;
+            if (tst == "icepose") icepose=cnt;
+            if (tst == "poseluna") poseluna=cnt;
+            if (tst == "posecelestia") posecelestia=cnt;
+      
+            // fixed pieces that get messed up sometimes ;)
+            // just added as needed, not necessarily complete.
+            // can disable this if we need memory
+            if (tst == "Back wall") {
+                llSetLinkPrimitiveParamsFast(cnt, [
+                        PRIM_ROT_LOCAL, <0.00002, -0.70714, 0.00002, 0.70707>, 
+                        PRIM_POS_LOCAL, <-1.03720, 0.00310, 0.97210>  ]);
+            }
+            if (tst == "magic step") {
+                llSetLinkPrimitiveParamsFast(cnt, [
+                        PRIM_ROT_LOCAL, <0.00000, 0.70711, 0.00000, 0.70711>, 
+                        PRIM_POS_LOCAL, <0.05650, -2.85750, -0.45930>  ]);
+            }
+            
+      
+            cnt--;
+        }
+        list x=[frontwall,stageright,stageleft,leginleft,leginright,roof1,roof2,legleft,
+                legright,rightsidewall,rightsidetop,leftsidewall,leftsidetop,flagpole,flagsphere,flag,
+                curtainleft,curtainright,cannonleft,cannonright,cannon1left,cannon2left,cannon3left,cannon1right,
+                cannon2right,cannon3right,rocketpole,rocketnose,rocketbody,wheel,wheelpole,sign,
+                signpoleleft,signpoleright,planetpole,planet,star1,star2,star3,yoke1,
+                yoke2,glassleft,glassright,flameleft,flameright,sparks1,sparks2,sparks3,
+                sparks4,mirror,pillow,smoke,showstart,innercircle,outercircle,wallcircle,
+                hat,icepose,poseluna,posecelestia];
+        integer z= llListFindList(x, [-1]);
+        if (z != -1) {
+            llOwnerSay("Failed to find a prim - list entry " + (string)z);
+            state inactive;
+            return;
+        }
+        
+        llOwnerSay("Done search. Resetting.");
+        
+        // move parts into the correct place
+        llSetLinkPrimitiveParamsFast(frontwall, [PRIM_ROT_LOCAL, rot_frontwall_up, PRIM_POS_LOCAL, pos_frontwall_up]);
+        
+        llSetLinkPrimitiveParamsFast(stageright, [PRIM_ROT_LOCAL, rot_stageright_packed, PRIM_POS_LOCAL, pos_stageright_packed, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+        llSetLinkPrimitiveParamsFast(stageleft, [PRIM_ROT_LOCAL, rot_stageleft_packed, PRIM_POS_LOCAL, pos_stageleft_packed, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+        llSetLinkPrimitiveParamsFast(leginleft, [PRIM_ROT_LOCAL, rot_leginleft_packed, PRIM_POS_LOCAL, pos_leginleft_packed, PRIM_COLOR, ALL_SIDES, legcolor, 0.0]);
+        llSetLinkPrimitiveParamsFast(leginright, [PRIM_ROT_LOCAL, rot_leginright_packed, PRIM_POS_LOCAL, pos_leginright_packed, PRIM_COLOR, ALL_SIDES, legcolor, 0.0]);
+        llSetLinkPrimitiveParamsFast(legleft, [PRIM_ROT_LOCAL, rot_legleft_hidden, PRIM_POS_LOCAL, pos_legleft_hidden, PRIM_COLOR, ALL_SIDES, legcolor, 0.0]);
+        llSetLinkPrimitiveParamsFast(legright, [PRIM_ROT_LOCAL, rot_legright_hidden, PRIM_POS_LOCAL, pos_legright_hidden, PRIM_COLOR, ALL_SIDES, legcolor, 0.0]);
+        llSetLinkPrimitiveParamsFast(roof1, [PRIM_ROT_LOCAL, rot_roof1_closed, PRIM_POS_LOCAL, pos_roof1_closed]);
+        llSetLinkPrimitiveParamsFast(roof2, [PRIM_ROT_LOCAL, rot_roof2_closed, PRIM_POS_LOCAL, pos_roof2_closed]);
+        llSetLinkPrimitiveParamsFast(rightsidewall, [PRIM_ROT_LOCAL, rot_rightsidewall_closed, PRIM_POS_LOCAL, pos_rightsidewall_closed]);
+        llSetLinkPrimitiveParamsFast(rightsidetop, [PRIM_ROT_LOCAL, rot_rightsidetop_closed, PRIM_POS_LOCAL, pos_rightsidetop_closed]);
+        llSetLinkPrimitiveParamsFast(leftsidewall, [PRIM_ROT_LOCAL, rot_leftsidewall_closed, PRIM_POS_LOCAL, pos_leftsidewall_closed]);
+        llSetLinkPrimitiveParamsFast(leftsidetop, [PRIM_ROT_LOCAL, rot_leftsidetop_closed, PRIM_POS_LOCAL, pos_leftsidetop_closed]);
+        llSetLinkPrimitiveParamsFast(flagpole, [PRIM_ROT_LOCAL, rot_flagpole_closed, PRIM_POS_LOCAL, pos_flagpole_closed]);
+        llSetLinkPrimitiveParamsFast(flagsphere, [PRIM_ROT_LOCAL, rot_flagsphere_closed, PRIM_POS_LOCAL, pos_flagsphere_closed]);
+        llSetLinkPrimitiveParamsFast(flag, [PRIM_ROT_LOCAL, rot_flag_closed, PRIM_POS_LOCAL, pos_flag_closed]);
+        llSetLinkPrimitiveParamsFast(curtainleft, [PRIM_ROT_LOCAL, rot_curtainleft_closed, PRIM_POS_LOCAL, pos_curtainleft_closed]);
+        llSetLinkPrimitiveParamsFast(curtainright, [PRIM_ROT_LOCAL, rot_curtainright_closed, PRIM_POS_LOCAL, pos_curtainright_closed]);
+        llSetLinkPrimitiveParamsFast(glassright, [PRIM_ROT_LOCAL, rot_glassright_closed, PRIM_POS_LOCAL, pos_glassright_closed]);
+        llSetLinkPrimitiveParamsFast(glassleft, [PRIM_ROT_LOCAL, rot_glassleft_closed, PRIM_POS_LOCAL, pos_glassleft_closed]);
+        
+        llSetLinkPrimitiveParamsFast(cannonright, [PRIM_ROT_LOCAL, rot_cannonright_closed, PRIM_POS_LOCAL, pos_cannonright_closed]);
+        llSetLinkPrimitiveParamsFast(cannon1right, [PRIM_ROT_LOCAL, rot_cannon1right_closed, PRIM_POS_LOCAL, pos_cannon1right_closed]);
+        llSetLinkPrimitiveParamsFast(cannon2right, [PRIM_ROT_LOCAL, rot_cannon2right_closed, PRIM_POS_LOCAL, pos_cannon2right_closed]);
+        llSetLinkPrimitiveParamsFast(cannon3right, [PRIM_ROT_LOCAL, rot_cannon3right_closed, PRIM_POS_LOCAL, pos_cannon3right_closed]);
+        llSetLinkPrimitiveParamsFast(cannonleft, [PRIM_ROT_LOCAL, rot_cannonleft_closed, PRIM_POS_LOCAL, pos_cannonleft_closed]);
+        llSetLinkPrimitiveParamsFast(cannon1left, [PRIM_ROT_LOCAL, rot_cannon1left_closed, PRIM_POS_LOCAL, pos_cannon1left_closed]);
+        llSetLinkPrimitiveParamsFast(cannon2left, [PRIM_ROT_LOCAL, rot_cannon2left_closed, PRIM_POS_LOCAL, pos_cannon2left_closed]);
+        llSetLinkPrimitiveParamsFast(cannon3left, [PRIM_ROT_LOCAL, rot_cannon3left_closed, PRIM_POS_LOCAL, pos_cannon3left_closed]);
+        
+        llSetLinkPrimitiveParamsFast(rocketbody, [PRIM_ROT_LOCAL, rot_rocketbody_closed, PRIM_POS_LOCAL, pos_rocketbody_closed]);
+        llSetLinkPrimitiveParamsFast(rocketnose, [PRIM_ROT_LOCAL, rot_rocketnose_closed, PRIM_POS_LOCAL, pos_rocketnose_closed]);
+        llSetLinkPrimitiveParamsFast(rocketpole, [PRIM_ROT_LOCAL, rot_rocketpole_closed, PRIM_POS_LOCAL, pos_rocketpole_closed, PRIM_SIZE, size_rocketpole_closed]);
+
+        llSetLinkPrimitiveParamsFast(wheel, [PRIM_ROT_LOCAL, rot_wheel_closed, PRIM_POS_LOCAL, pos_wheel_closed, PRIM_TEXT, "", <1.0,1.0,1.0>, 0.5]);
+        llSetLinkPrimitiveParamsFast(wheelpole, [PRIM_ROT_LOCAL, rot_wheelpole_closed, PRIM_POS_LOCAL, pos_wheelpole_closed, PRIM_SIZE, size_wheelpole_closed]);
+
+        llSetLinkPrimitiveParamsFast(sign, [PRIM_ROT_LOCAL, rot_sign_closed, PRIM_POS_LOCAL, pos_sign_closed]);
+        llSetLinkPrimitiveParamsFast(signpoleleft, [PRIM_ROT_LOCAL, rot_signpoleleft_closed, PRIM_POS_LOCAL, pos_signpoleleft_closed, PRIM_SIZE, size_signpoleleft_closed]);
+        llSetLinkPrimitiveParamsFast(signpoleright, [PRIM_ROT_LOCAL, rot_signpoleright_closed, PRIM_POS_LOCAL, pos_signpoleright_closed, PRIM_SIZE, size_signpoleright_closed]);
+
+        llSetLinkPrimitiveParamsFast(planet, [PRIM_ROT_LOCAL, rot_planet_closed, PRIM_POS_LOCAL, pos_planet_closed]);
+        llSetLinkPrimitiveParamsFast(planetpole, [PRIM_ROT_LOCAL, rot_planetpole_closed, PRIM_POS_LOCAL, pos_planetpole_closed, PRIM_SIZE, size_planetpole_closed]);
+        llSetLinkPrimitiveParamsFast(star1, [PRIM_ROT_LOCAL, rot_star1_closed, PRIM_POS_LOCAL, pos_star1_closed]);
+        llSetLinkPrimitiveParamsFast(star2, [PRIM_ROT_LOCAL, rot_star2_closed, PRIM_POS_LOCAL, pos_star2_closed]);
+        llSetLinkPrimitiveParamsFast(star3, [PRIM_ROT_LOCAL, rot_star3_closed, PRIM_POS_LOCAL, pos_star3_closed]);
+
+        llSetLinkPrimitiveParamsFast(yoke1, [PRIM_ROT_LOCAL, rot_yoke1_closed, PRIM_POS_LOCAL, pos_yoke1_closed]);
+        llSetLinkPrimitiveParamsFast(yoke2, [PRIM_ROT_LOCAL, rot_yoke2_closed, PRIM_POS_LOCAL, pos_yoke2_closed]);
+
+        llSetLinkPrimitiveParamsFast(flameleft, [PRIM_ROT_LOCAL, rot_flameleft_closed, PRIM_POS_LOCAL, pos_flameleft_closed]);
+        llSetLinkPrimitiveParamsFast(flameright, [PRIM_ROT_LOCAL, rot_flameright_closed, PRIM_POS_LOCAL, pos_flameright_closed]);
+        llSetLinkPrimitiveParamsFast(sparks1, [PRIM_ROT_LOCAL, rot_sparks1_closed, PRIM_POS_LOCAL, pos_sparks1_closed]);
+        llSetLinkPrimitiveParamsFast(sparks2, [PRIM_ROT_LOCAL, rot_sparks2_closed, PRIM_POS_LOCAL, pos_sparks2_closed]);
+        llSetLinkPrimitiveParamsFast(sparks3, [PRIM_ROT_LOCAL, rot_sparks3_closed, PRIM_POS_LOCAL, pos_sparks3_closed]);
+        llSetLinkPrimitiveParamsFast(sparks4, [PRIM_ROT_LOCAL, rot_sparks4_closed, PRIM_POS_LOCAL, pos_sparks4_closed]);
+        
+        llSetLinkPrimitiveParamsFast(smoke, [PRIM_ROT_LOCAL, rot_smoke_closed, PRIM_POS_LOCAL, pos_smoke_closed]);
+        llSetLinkPrimitiveParamsFast(showstart, [PRIM_ROT_LOCAL, rot_showstart_close, PRIM_POS_LOCAL, pos_showstart_close]);
+        
+        llSetLinkPrimitiveParamsFast(innercircle, [PRIM_POS_LOCAL, pos_innercircle_close, PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+        llSetLinkPrimitiveParamsFast(outercircle, [PRIM_POS_LOCAL, pos_outercircle_close, PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0]);
+        llSetLinkPrimitiveParamsFast(wallcircle, [PRIM_POS_LOCAL, pos_wallcircle_close, PRIM_GLOW, ALL_SIDES, 0.0, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0, PRIM_SIZE, size_wall_down]);
+        llSetLinkPrimitiveParamsFast(hat, [PRIM_ROT_LOCAL, rot_hat_closed, PRIM_POS_LOCAL, pos_hat_closed, PRIM_COLOR, ALL_SIDES, <1.0,1.0,1.0>, 0.0, PRIM_SIZE, size_hat_full*0.1]);
+        llSetLinkPrimitiveParamsFast(icepose, [PRIM_POS_LOCAL, pos_icepose_closed]);
+        llSetLinkPrimitiveParamsFast(poseluna, [PRIM_POS_LOCAL, pos_poseluna_closed]);
+        llSetLinkPrimitiveParamsFast(posecelestia, [PRIM_POS_LOCAL, pos_posecelestia_closed]);
+
+        // set state to closed
+        status = 0;
+        doorstatus = 0;
+        
+        z = llGetFreeMemory();
+        llOwnerSay("Ready. Script memory free: " + (string)z);
+    }
+    
+    timer()
+    {
+        status = status + direction;
+        if (status > maxstate) {
+            status = maxstate;
+            direction = -1;
+            llSetTimerEvent(0.0);
+            return;
+        }
+        if (status < 0) {
+            status = 0;
+            direction = 1;
+            llSetTimerEvent(0.0);
+            return;
+        } 
+        processstate();
+    }
+    
+    link_message(integer sender, integer num, string msg, key id) {
+        // input for command things
+        if (sender == leftsidewall) {
+            if (msg == "door") {
+                // request to open or close the entry 'door'
+                if (status == 0) {
+                    // only when stage is closed
+                    if (doorstatus) {
+                        // it's open, so close it
+                        llSetLinkPrimitiveParamsFast(leftsidewall, [PRIM_ROT_LOCAL, rot_leftsidewall_closed, PRIM_POS_LOCAL, pos_leftsidewall_closed]);
+                        llSetLinkPrimitiveParamsFast(leftsidetop, [PRIM_ROT_LOCAL, rot_leftsidetop_closed, PRIM_POS_LOCAL, pos_leftsidetop_closed]);
+                        llSetLinkPrimitiveParamsFast(glassright, [PRIM_ROT_LOCAL, rot_glassright_closed, PRIM_POS_LOCAL, pos_glassright_closed]);
+                        doorstatus = 0;
+                    } else {
+                        // it's closed, so open it
+                        llSetLinkPrimitiveParamsFast(leftsidewall, [PRIM_ROT_LOCAL, rot_leftsidewall_open, PRIM_POS_LOCAL, pos_leftsidewall_open]);
+                        llSetLinkPrimitiveParamsFast(leftsidetop, [PRIM_ROT_LOCAL, rot_leftsidetop_open, PRIM_POS_LOCAL, pos_leftsidetop_open]);
+                        llSetLinkPrimitiveParamsFast(glassright, [PRIM_ROT_LOCAL, rot_glassright_open, PRIM_POS_LOCAL, pos_glassright_open]);
+                        doorstatus = 1;
+                    }
+                }
+            }
+        } else if (sender == pillow) {
+            if (msg == "mirror") {
+                // activate the mirror portrait of Trixie sitting
+                if (status == 0) {
+                    // closed - only one image
+                    llSetLinkPrimitiveParamsFast(mirror, [PRIM_TEXTURE, 0, "mirrorclose", <1.0,1.0,1.0>, <0.0,0.0,0.0>, 0.0]);
+                } else {
+                    // open - based on sim time
+                    vector sun = llGetSunDirection();
+                    if (sun.z <= 0.0) {
+                        // night time
+                        llSetLinkPrimitiveParamsFast(mirror, [PRIM_TEXTURE, 0, "mirroropennight", <1.0,1.0,1.0>, <0.0,0.0,0.0>, 0.0]);
+                    } else {
+                        // day time
+                        llSetLinkPrimitiveParamsFast(mirror, [PRIM_TEXTURE, 0, "mirroropenday", <1.0,1.0,1.0>, <0.0,0.0,0.0>, 0.0]);
+                    }
+                }
+            } else if (msg == "unmirror") {
+                // remove the image of trixie from the mirror
+                llSetLinkPrimitiveParamsFast(mirror, [PRIM_TEXTURE, 0, "mirror", <1.0,1.0,1.0>, <0.0,0.0,0.0>, 0.0]);
+            }
+        } else if (sender == 1) {
+            // root prim - commands from control script
+            if (msg == "staging") {
+                // move the start pose ball underground
+                llSetLinkPrimitiveParamsFast(showstart, [PRIM_ROT_LOCAL, rot_showstart_staging, PRIM_POS_LOCAL, pos_showstart_staging]);
+                llMessageLinked(showstart, 0, "wait", NULL_KEY);
+            } else if (msg == "start") {
+                // move te start pose ball to the stage, delay, and have it activate the pose
+                llSetLinkPrimitiveParamsFast(showstart, [PRIM_ROT_LOCAL, rot_showstart_open, PRIM_POS_LOCAL, pos_showstart_open]);
+                llSleep(0.5);
+                llMessageLinked(showstart, 0, "pose", NULL_KEY);
+            } else if (msg == "reset") {
+                // move the start pose ball back into the trailer (needed? also happens on close)
+                 llSetLinkPrimitiveParamsFast(showstart, [PRIM_ROT_LOCAL, rot_showstart_close, PRIM_POS_LOCAL, pos_showstart_close]);
+                llMessageLinked(showstart, 0, "off", NULL_KEY);
+            } else if (msg == "unfold") {
+                // request to open the stage, if not already
+                if (status == 0) {
+                     llSetTimerEvent(rate);
+                }
+            } else if (msg == "fold") {
+                // request to close the stage, if not already
+                if (status != 0) {
+                    // remove the image of trixie from the mirror, just to be safe
+                    llSetLinkPrimitiveParamsFast(mirror, [PRIM_TEXTURE, 0, "mirror", <1.0,1.0,1.0>, <0.0,0.0,0.0>, 0.0]);
+                    llSetTimerEvent(rate);
+                }
+            }  else if (msg == "tiptext") {
+                if (num == 1) {
+                    llSetLinkPrimitiveParamsFast(wheel, [PRIM_TEXT, "Pay the wheel to tip Trixie", <1.0,1.0,1.0>, 0.5]);
+                } else {
+                    llSetLinkPrimitiveParamsFast(wheel, [PRIM_TEXT, "", ZERO_VECTOR, 0.0]);
+                }                    
+            } else if (msg == "circles") {
+                // this one cheats a bit and does it all inline rather than with timers...
+                if (num == 1) {         
+                    ringsout();      
+                } else {
+                    ringsaway();
+                }        
+            }
+        }
+    }    
+    
+}
+
+state inactive
+{
+    // just an easy way to make sure parts don't move around by accident!
+    state_entry()
+    {
+    }
+    
+    changed(integer change) 
+    {
+        if (change & CHANGED_LINK) {
+            llResetScript();
+        }
+    }
+    
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+}    
+

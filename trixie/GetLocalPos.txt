@@ -1,0 +1,12 @@
+default
+{
+    state_entry()
+    {
+        rotation rot=llGetLocalRot();
+        vector pos = llGetLocalPos();
+        llOwnerSay("Rotation: " + (string)rot);
+        llOwnerSay("Position: " + (string)pos);
+        llRemoveInventory(llGetScriptName());
+    }
+
+}

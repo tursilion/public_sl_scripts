@@ -1,0 +1,73 @@
+///|/|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*
+//|/|*     Nyterave animation ball script!   *
+//|/|*           FREE TO USE V2.1            * 
+//|/|*        by Sitting Lightcloud          *
+//|/|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|/
+// Modified by Tursi for surprise sky sits ;)
+
+// position to sit on the ball e.g <0.0, 0.0, 0.43>
+vector POSITION=<0.0, 0.0,0.24>;
+string animation;
+
+hide_me()
+{
+    llSetAlpha(0.0, ALL_SIDES);
+}
+
+show_me()
+{
+    llSetAlpha(1.0, ALL_SIDES);
+}
+
+default 
+{
+    state_entry() 
+    {
+        llSitTarget(POSITION, ZERO_ROTATION); 
+        hide_me();
+    }
+    
+    on_rez(integer r)
+    {
+        llResetScript();
+    }
+    
+    changed(integer change) 
+    { 
+        if (change & CHANGED_LINK) 
+        {
+            key av = llAvatarOnSitTarget();
+               
+            if (av != NULL_KEY) 
+            { 
+                llRequestPermissions(av, PERMISSION_TRIGGER_ANIMATION);
+            }
+            else
+            {
+                integer perm=llGetPermissions();
+                if ((perm & PERMISSION_TRIGGER_ANIMATION) && llStringLength(animation)>0)       
+                llStopAnimation(animation);
+                animation="";
+            }
+        }
+    }
+    run_time_permissions(integer perm)
+    {
+        if (perm & PERMISSION_TRIGGER_ANIMATION)
+        {
+            llStopAnimation("sit");
+            animation=llGetInventoryName(INVENTORY_ANIMATION,0);
+            llStartAnimation(animation);
+        }
+    }
+    
+    link_message(integer sender, integer num, string str, key id)
+    {
+        if (str == "prinshow") {
+            show_me();
+        } else if (str == "prinhide") {
+            hide_me();
+        }
+    }
+    
+}

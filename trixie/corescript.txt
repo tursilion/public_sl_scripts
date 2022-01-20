@@ -1,0 +1,315 @@
+// Tursi's script for Trixie's swap
+
+vector SITPOS = <0.0, 0.0,0.24>;
+rotation SITROT = ZERO_ROTATION;
+
+integer channel = -555;
+
+integer celestia = -1;
+integer luna = -1;
+integer solar = -1;
+integer nightmare = -1;
+
+vector celhomepos = <0.00913, -1.46480, 2.12103>;
+vector celunderpos = <1.12988, -1.46480, -0.59066>;
+vector celbehindpos = <1.12988, -1.46480, 8.46540>;
+vector celuppos = <0.06661, -1.46480, 8.46540>;
+rotation celhomerot = <-0.50000, -0.50000, 0.50000, 0.50000>;
+rotation celunderrot = <0.50000, 0.50000, 0.50000, 0.50000>;
+rotation celbehindrot = <0.50000, 0.50000, 0.50000, 0.50000>;
+rotation celuprot = <0.70711, 0.00000, -0.70711, 0.00000>;
+
+vector lunahomepos = <0.01496, 1.54659, 2.12103>;
+vector lunaunderpos = <1.13319, 1.54659, -0.70590>;
+vector lunabehindpos = <1.13318, 1.54659, 9.01572>;
+vector lunauppos = <-0.08496, 1.54659, 9.01572>;
+rotation lunahomerot = <0.48946, -0.51032, -0.50172, 0.49828>;
+rotation lunaunderrot = <-0.50172, 0.49828, -0.48946, 0.51032>;
+rotation lunabehindrot = <-0.50172, 0.49828, -0.48946, 0.51032>;
+rotation lunauprot = <0.69847, 0.00015, -0.71564, 0.00000>;
+
+vector nmmhomepos = <0.01496, 1.54659, -2.92563>;
+vector nmmunderpos = <1.13319, 1.54659, -2.92563>;
+vector nmmstagepos = <0.01496, 1.54659, 2.12103>;
+rotation nmmhomerot = <0.50000, -0.50000, -0.50000, 0.50000>;
+rotation nmmunderrot = <0.50000, 0.50000, 0.50000, 0.50000>;
+rotation nmmstagerot = <0.48946, -0.51032, -0.50172, 0.49828>;
+
+vector solarhomepos = <0.00913, -1.46480, -2.92563>;
+vector solarunderpos = <1.13319, -1.46480, -2.92563>;
+vector solarstagepos = <0.00913, -1.46480, 2.12103>;
+rotation solarhomerot = <-0.50000, -0.50000, 0.50000, 0.50000>;
+rotation solarunderrot = <-0.50000, 0.50000, -0.50000, 0.50000>;
+rotation solarstagerot = <-0.50000, -0.50000, 0.50000, 0.50000>;
+
+integer onstage=0;
+
+//Sets / Updates the sit target moving the avatar on it if necessary.
+UpdateLinkSitTarget(integer link)
+{//Using this while the object is moving may give unpredictable results.
+//    llLinkSitTarget(link, pos, rot);//Set the sit target
+    key user = llAvatarOnLinkSitTarget(link);
+    vector pos = SITPOS;
+    rotation rot = SITROT;
+    if(user)//true if there is a user seated on the sittarget, if so update their position
+    {
+        vector size = llGetAgentSize(user);
+        if(size)//This tests to make sure the user really exists.
+        {
+            integer linkNum = llGetNumberOfPrims();
+            do
+            {
+                if(user == llGetLinkKey( linkNum ))//just checking to make sure the index is valid.
+                {
+                    //We need to make the position and rotation local to the current prim
+                    list local;
+                    if(llGetLinkKey(link) != llGetLinkKey(1))//only need the local rot if it's not the root.
+                        local = llGetLinkPrimitiveParams(link, [PRIM_POS_LOCAL, PRIM_ROT_LOCAL]);
+                        float fAdjust = ((((0.008906 * size.z) + -0.049831) * size.z) + 0.088967) * size.z;
+                        llSetLinkPrimitiveParamsFast(linkNum, [
+                            PRIM_POS_LOCAL, ((pos + <0.0,0.0,0.4> - (llRot2Up(rot) * fAdjust)) * llList2Rot(local, 1)) + llList2Vector(local, 0),
+                            PRIM_ROT_LOCAL, rot * llList2Rot(local, 1)
+                        ]);
+                    jump end;//cheaper but a tad slower then return
+                }
+            }while( --linkNum );
+        }
+        else
+        {//It is rare that the sit target will bork but it does happen, this can help to fix it.
+            llUnSit(user);
+        }
+    }
+    @end;
+}//Written by Strife Onizuka, size adjustment provided by Talarus Luan
+
+unsit(integer link)
+{
+    key user = llAvatarOnLinkSitTarget(link);
+    llUnSit(user);
+}
+
+homepos()
+{
+    // put all four home
+    
+    llSetLinkPrimitiveParamsFast(celestia, [PRIM_ROT_LOCAL, celhomerot, PRIM_POS_LOCAL, celhomepos]);
+    UpdateLinkSitTarget(celestia);
+
+    llSetLinkPrimitiveParamsFast(luna, [PRIM_ROT_LOCAL, lunahomerot, PRIM_POS_LOCAL, lunahomepos]);
+    UpdateLinkSitTarget(luna);
+
+    llSetLinkPrimitiveParamsFast(nightmare, [PRIM_ROT_LOCAL, nmmhomerot, PRIM_POS_LOCAL, nmmhomepos]);
+    UpdateLinkSitTarget(nightmare);
+
+    llSetLinkPrimitiveParamsFast(solar, [PRIM_ROT_LOCAL, solarhomerot, PRIM_POS_LOCAL, solarhomepos]);
+    UpdateLinkSitTarget(solar);
+    
+    // kick anyone off the nightmare poses
+    unsit(solar);
+    unsit(nightmare);
+    
+    onstage=0;
+
+}
+
+underpos()
+{
+    // move the guests back under the stage, and move the princesses up on stage
+    
+    llSetLinkPrimitiveParamsFast(celestia, [PRIM_ROT_LOCAL, celunderrot, PRIM_POS_LOCAL, celunderpos]);
+    UpdateLinkSitTarget(celestia);
+
+    llSetLinkPrimitiveParamsFast(luna, [PRIM_ROT_LOCAL, lunaunderrot, PRIM_POS_LOCAL, lunaunderpos]);
+    UpdateLinkSitTarget(luna);
+    
+    // longer delay before the princesses
+    llSleep(0.4);
+    
+    llSetLinkPrimitiveParamsFast(nightmare, [PRIM_ROT_LOCAL, nmmstagerot, PRIM_POS_LOCAL, nmmstagepos]);
+    UpdateLinkSitTarget(nightmare);
+
+    llSetLinkPrimitiveParamsFast(solar, [PRIM_ROT_LOCAL, solarstagerot, PRIM_POS_LOCAL, solarstagepos]);
+    UpdateLinkSitTarget(solar);
+    
+    onstage=1;
+}
+
+behindpos()
+{
+    // move the guests underground behind the audience
+    
+    llSetLinkPrimitiveParamsFast(celestia, [PRIM_ROT_LOCAL, celbehindrot, PRIM_POS_LOCAL, celbehindpos]);
+    UpdateLinkSitTarget(celestia);
+
+    llSetLinkPrimitiveParamsFast(luna, [PRIM_ROT_LOCAL, lunabehindrot, PRIM_POS_LOCAL, lunabehindpos]);
+    UpdateLinkSitTarget(luna);
+}
+
+uppos()
+{
+    // move the guests up aboveground behind the audience
+    
+    llSetLinkPrimitiveParamsFast(celestia, [PRIM_ROT_LOCAL, celuprot, PRIM_POS_LOCAL, celuppos]);
+    UpdateLinkSitTarget(celestia);
+
+    llSetLinkPrimitiveParamsFast(luna, [PRIM_ROT_LOCAL, lunauprot, PRIM_POS_LOCAL, lunauppos]);
+    UpdateLinkSitTarget(luna);
+}
+
+doswap()
+{
+    // first a delay - the beam effect needs to bring the spheres to full
+    // this takes 0.5+5*0.2 = 1.5 seconds - we'll wait slightly less for distraction's sake
+    // we need 0.4s to do the swap (and we'll pop up the guests on end)
+    llSleep(1.0);
+    
+    // hide the players and do the actual swap
+    underpos();
+    llSleep(0.2);
+    
+    // done for now
+}
+
+finishswap()
+{
+    // just put the guest back into the audience
+    behindpos();
+    llSleep(2.0);
+    
+    uppos();
+    llSleep(0.2);
+
+    unsit(celestia);
+    unsit(luna);
+    unsit(nightmare);
+    unsit(solar);
+    llSleep(0.2);
+    
+//    llDie();
+}
+
+default
+{
+    state_entry()
+    {
+        llOwnerSay("Looking for parts...");
+        
+        if (llGetLinkName(1) != "NewPosesCore") {
+            llOwnerSay("Root prim is not named 'NewPosesCore' - the root prim may not change! Disabled.");
+            state inactive;
+            return;
+        }
+          
+        integer cnt = llGetObjectPrimCount(llGetKey());
+        while (cnt > 0) {
+            string tst = llGetLinkName(cnt);
+            if (tst == "posecelestia") celestia=cnt;
+            if (tst == "posenmm") nightmare=cnt;
+            if (tst == "posesolar") solar=cnt;
+            if (tst == "poseluna") luna=cnt;
+            cnt--;
+        }
+        list x=[celestia,luna,nightmare,solar];
+        integer z= llListFindList(x, [-1]);
+        if (z != -1) {
+            llOwnerSay("Failed to find a prim - list entry " + (string)z);
+            state inactive;
+            return;
+        }
+        
+        llOwnerSay("Done search. Resetting.");        
+        
+        homepos();
+        
+        llListen(channel, "", NULL_KEY, "");
+    }
+
+    on_rez(integer r)
+    {
+        llResetScript();
+    }
+    
+    listen(integer channel, string name, key id, string msg) 
+    {  
+        id = llGetOwnerKey(id);
+        if (id != llGetOwner()) {
+            return;
+        }
+        
+        if (msg == "nmtbeams") {
+            doswap();
+        } else if (msg == "nmtdie") {
+            llDie();
+        } else if (msg == "newposeayt") {
+            llWhisper(-10, "newposeok");
+        } else if (msg == "nmtend") {
+            finishswap();
+        } else if (msg == "nmtreset") {
+            llResetScript();
+        }
+    }
+    
+    // this is only here to help the princesses pop around
+    changed(integer change) 
+    { 
+        if (change & CHANGED_LINK) 
+        {
+            // check solar flare
+            key av = llAvatarOnLinkSitTarget(solar);
+            if (av != NULL_KEY) 
+            { 
+                if (onstage) {
+                    llSetLinkPrimitiveParamsFast(solar, [PRIM_ROT_LOCAL, solarstagerot, PRIM_POS_LOCAL, solarstagepos]);
+                    UpdateLinkSitTarget(solar);
+                } else {
+                    llSetLinkPrimitiveParamsFast(solar, [PRIM_ROT_LOCAL, solarunderrot, PRIM_POS_LOCAL, solarunderpos]);
+                    UpdateLinkSitTarget(solar);
+                }
+            }
+            else
+            {
+                llSetLinkPrimitiveParamsFast(solar, [PRIM_ROT_LOCAL, solarhomerot, PRIM_POS_LOCAL, solarhomepos]);
+                UpdateLinkSitTarget(solar);
+            }
+            
+            // check nightmare moon
+            av = llAvatarOnLinkSitTarget(nightmare);
+            if (av != NULL_KEY) 
+            { 
+                if (onstage) {
+                    llSetLinkPrimitiveParamsFast(nightmare, [PRIM_ROT_LOCAL, nmmstagerot, PRIM_POS_LOCAL, nmmstagepos]);
+                    UpdateLinkSitTarget(nightmare);
+                } else {
+                    llSetLinkPrimitiveParamsFast(nightmare, [PRIM_ROT_LOCAL, nmmunderrot, PRIM_POS_LOCAL, nmmunderpos]);
+                    UpdateLinkSitTarget(nightmare);
+                }
+            }
+            else
+            {
+                llSetLinkPrimitiveParamsFast(nightmare, [PRIM_ROT_LOCAL, nmmhomerot, PRIM_POS_LOCAL, nmmhomepos]);
+                UpdateLinkSitTarget(nightmare);
+            }
+            
+        }
+    }    
+}
+
+state inactive
+{
+    // just an easy way to make sure parts don't move around by accident!
+    state_entry()
+    {
+    }
+    
+    changed(integer change) 
+    {
+        if (change & CHANGED_LINK) {
+            llResetScript();
+        }
+    }
+    
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+}    

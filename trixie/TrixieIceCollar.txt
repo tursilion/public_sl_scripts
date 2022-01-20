@@ -1,0 +1,164 @@
+// Trixie's ice collar. Fades in and out. Same as ice cape without the sparklies
+// or communication.
+
+integer channel = -7;
+float speed = 0.025;
+
+float visibility;
+
+setVisibility(float vis)
+{
+    integer idx;
+    integer max=llGetNumberOfPrims();
+    for (idx=1; idx<=max; idx++) {
+        llSetLinkAlpha(idx, vis, ALL_SIDES);
+    }        
+}
+
+default
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        state invisible;
+    }
+}
+
+state visible
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        setVisibility(1.0);
+        llListen(channel, "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        if (msg == "capestarayt") {
+            // no answer, but no error either, but reset
+            state invisible;
+        } else if (msg == "capeiceayt") {
+            llWhisper(-10, "capeiceok");
+            state invisible;
+        } else if (msg == "capetuxayt") {
+            // no answer, but no error either, but reset
+            state invisible;
+        } else if (msg == "capegoice") {
+            llOwnerSay("Got 'capegoice' in state visible");
+        } else if (msg == "capegostars") {
+            state fadeout;
+        } else if (msg == "capegotux") {
+            state fadeout;
+        } else if (msg == "capearm1") {
+            // no answer, but no error either
+        } else if (msg == "capearm2") {
+            // no answer, but no error either
+        } else if (msg == "capearm3") {
+            // no answer, but no error either
+        } else if (msg == "capearm4") {
+            // no answer, but no error either
+        } else {
+            llOwnerSay("Got bad message '" + msg + "' in state visible");
+        }
+    }
+}
+
+state fadeout
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        visibility=1.0;
+        llSetTimerEvent(0.1);
+    }
+    
+    timer()
+    {
+        visibility -= speed;
+        if (visibility <= 0.0) {
+            llSetTimerEvent(0.0);
+            state invisible;
+        }
+        setVisibility(visibility);
+    }
+}
+
+state invisible
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        setVisibility(0.0);
+        llListen(channel, "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        if (msg == "capestarayt") {
+            // no answer, but no error either
+        } else if (msg == "capeiceayt") {
+            // no answer, but no error either
+        } else if (msg == "capetuxayt") {
+            // no answer, but no error either
+        } else if (msg == "capegostars") {
+            // no answer, but no error either
+        } else if (msg == "capegoice") {
+            state fadein;
+        } else if (msg == "capegotux") {
+            // no answer, but no error either
+        } else if (msg == "capearm1") {
+            // no answer, but no error either
+        } else if (msg == "capearm2") {
+            // no answer, but no error either
+        } else if (msg == "capearm3") {
+            // no answer, but no error either
+        } else if (msg == "capearm4") {
+            // no answer, but no error either
+        } else {
+            llOwnerSay("Got bad message '" + msg + "' in state invisible");
+        }
+    }
+}
+
+    
+state fadein
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        visibility=0.0;
+        llSetTimerEvent(0.1);
+    }
+    
+    timer()
+    {
+        visibility += speed;
+        if (visibility >= 1.0) {
+            llSetTimerEvent(0.0);
+            state visible;
+        }
+        setVisibility(visibility);
+    }
+}
+

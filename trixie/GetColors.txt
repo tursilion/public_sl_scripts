@@ -1,0 +1,22 @@
+default
+{
+    state_entry()
+    {
+        integer idx;
+        string str;
+        integer max=llGetNumberOfPrims();
+        integer cnt = 0;
+        for (idx=1; idx<=max; idx++) {
+            list x = llGetLinkPrimitiveParams(idx-1, [PRIM_COLOR, ALL_SIDES]);
+            str=str+llList2String(x, 0);
+            str=str+ ", ";
+            cnt++;
+            if (cnt == 4) {
+                llOwnerSay(str);
+                str="";
+                cnt = 0;
+            }
+        }        
+        llOwnerSay(str);
+    }
+}

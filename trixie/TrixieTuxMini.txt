@@ -1,0 +1,108 @@
+// Trixie's Tuxedo. Just a fast on and off, no effects.
+
+integer channel = -7;
+
+setVisibility(float vis)
+{
+    integer idx;
+    integer max=llGetNumberOfPrims();
+    for (idx=1; idx<=max; idx++) {
+        llSetLinkAlpha(idx, vis, ALL_SIDES);
+    }        
+}
+
+default
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        state invisible;
+    }
+}
+
+state visible
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        setVisibility(1.0);
+        llListen(channel, "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        if (msg == "capestarayt") {
+            // no answer, but no error either
+        } else if (msg == "capeiceayt") {
+            // no answer, but no error either
+        } else if (msg == "capetuxayt") {
+            llWhisper(-10, "capetuxok");
+            state invisible;     //reset
+        } else if (msg == "capegoice") {
+            state invisible;     //reset
+        } else if (msg == "capegostars") {
+            state invisible;     //reset
+        } else if (msg == "capegotux") {
+            llOwnerSay("Got capegotux in visible state");
+        } else if (msg == "capearm1") {
+            // no answer, but no error either
+        } else if (msg == "capearm2") {
+            // no answer, but no error either
+        } else if (msg == "capearm3") {
+            // no answer, but no error either
+        } else if (msg == "capearm4") {
+            // no answer, but no error either
+        } else {
+            llOwnerSay("Got bad message '" + msg + "' in state visible");
+        }
+    }
+}
+
+state invisible
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        setVisibility(0.0);
+        llListen(channel, "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        if (msg == "capestarayt") {
+            // no answer, but no error either
+        } else if (msg == "capeiceayt") {
+            // no answer, but no error either
+        } else if (msg == "capetuxayt") {
+            llWhisper(-10, "capetuxok");
+        } else if (msg == "capegostars") {
+            // no answer, but no error either
+        } else if (msg == "capegoice") {
+            // no answer, but no error either
+        } else if (msg == "capegotux") {
+            state visible;
+        } else if (msg == "capearm1") {
+            // no answer, but no error either
+        } else if (msg == "capearm2") {
+            // no answer, but no error either
+        } else if (msg == "capearm3") {
+            // no answer, but no error either
+        } else if (msg == "capearm4") {
+            // no answer, but no error either
+        } else {
+            llOwnerSay("Got bad message '" + msg + "' in state invisible");
+        }
+    }
+}

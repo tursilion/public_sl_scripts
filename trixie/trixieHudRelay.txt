@@ -1,0 +1,129 @@
+// simple link_message relay for the HUDs
+string newanim="";
+string oldanim="";
+
+stopanimation(string str) 
+{
+    if (oldanim != "") {
+        llStopAnimation(oldanim);
+    }
+    if (oldanim != str) {
+        llStopAnimation(str);    // just in case
+    }
+    oldanim="";
+    llMessageLinked(LINK_ALL_OTHERS, 0, "ZHAO_AOON", NULL_KEY);
+}
+
+gestures(string msg)
+{
+    // gesture emulation
+    if (msg == "gocastle") {
+
+        // starts, and then stays on
+        llMessageLinked(LINK_ALL_OTHERS, 0, "ZHAO_AOOFF", NULL_KEY);
+        newanim="TrixieRaiseIce2c";
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+
+    } else if (msg == "endcastle") {
+        
+        stopanimation("TrixieRaiseIce2c");
+        
+    } else if (msg == "goice") {
+
+        llWhisper(-7, "capegoice");
+        newanim="TrixieIceAnimG";
+        llMessageLinked(LINK_ALL_OTHERS, 0, "ZHAO_AOOFF", NULL_KEY);
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        llSetTimerEvent(8.0);
+
+    } else if (msg == "trixie") {
+        
+        llTriggerSound("Fanfare1", 1.0);
+        newanim="trixe V.3";
+//                newanim="temptrixie";
+        llMessageLinked(LINK_ALL_OTHERS, 0, "ZHAO_AOOFF", NULL_KEY);
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        llSetTimerEvent(5.0);
+    } else if (msg == "rimshot") {
+        
+        llTriggerSound("Rimshot", 1.0);
+    } else if (msg == "intro") {
+        llSay(0, "Come one, come all!");
+        llSleep(3.0);
+        llSay(0, "It's time once again to witness");
+        llSleep(3.0);
+        llSay(0, "the AMAZING show-stopping ability");
+        llSleep(2.0);
+        llSay(0, "of the Mare of Magic!");
+        llSleep(3.0);
+        llSay(0, "Presenting the most magical unicorn in Equestria!");
+        llSleep(5.0);
+        llSay(0, "The one!");
+        llSleep(1.0);
+        llSay(0, "The only!");
+        llSleep(1.0);
+        llSay(0, "The Great and Powerful TRIXIE!!");
+    }
+}
+
+default
+{
+    state_entry()
+    {
+        newanim="";
+        oldanim="";
+        // just to avoid it asking later when timing matters
+        llRequestPermissions(llGetOwner(), PERMISSION_TRIGGER_ANIMATION);
+        llListen(6, "", NULL_KEY, "");      // for HUD link relay
+        llListen(7, "", NULL_KEY, "");      // for gesture emulation
+    }
+    
+    link_message(integer sender, integer num, string str, key id)
+    {
+        // gestures run through here too from the script tool
+        gestures(str);
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        llOwnerSay("Got ("+(string)channel+") :" + msg);
+        
+        id = llGetOwnerKey(id);
+        if (id != llGetOwner()) {
+            return;
+        }
+
+        if (channel == 6) {
+            // HUD link relay
+            llMessageLinked(LINK_ALL_OTHERS, 0, msg, id);
+        } else {
+            gestures(msg);
+        }
+    }
+    
+    timer()
+    {
+        llSetTimerEvent(0.0);
+        stopanimation(oldanim);
+    }
+    
+    run_time_permissions(integer perm)
+    {
+        if (perm & PERMISSION_TRIGGER_ANIMATION)
+        {
+            if (newanim != "") {
+                if (oldanim == "") {
+                    // try to stop whatever is active
+                    llStopAnimation(llGetAnimationOverride(llGetAnimation(llGetOwner())));
+                } else {
+                    llStopAnimation(oldanim);
+                    oldanim="";
+                }
+                llStartAnimation(newanim);
+                oldanim=newanim;
+                newanim="";
+            }
+        }
+    }
+    
+}

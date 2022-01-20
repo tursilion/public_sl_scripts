@@ -1,0 +1,19 @@
+default
+{
+    state_entry()
+    {
+    }
+    
+    on_rez(integer x)
+    {
+        // only on trigger, so it's easier to work on it
+        if (x == 99) {
+            // wait one second for the box to vanish, then fall. After a few more seconds, self-destruct
+            llSleep(3.0);
+            llSetStatus(STATUS_PHYSICS, TRUE);
+            llSleep(10.0);
+            llDie();
+        }
+    } 
+
+}

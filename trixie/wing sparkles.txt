@@ -1,0 +1,64 @@
+// Mane Sparkles by Marjan Tomba
+// Created on Oct 3, 2011
+// Free to use as needed.
+
+integer number     =   5;   // Number of partcles to appear each burst
+float rate         = 0.1;   // Number of bursts each second  0.1 = 10 bursts each second
+float radius       = 0.10;   // Distance from emitter in meters.
+float age          = 1.5;   // How long the partcles last
+float start_size   = 0.1;   // How big particles start
+float end_size     = 0.01;   // How big particles finish as
+vector start_color = <1.0, 1.0, 1.0>; // Start color  <R,G,B>  <1.0, 1.0, 1.0> = white
+vector end_color   = <1.0, 1.0, 1.0>; // End color  <R,G,B>
+
+particleson() {
+    llParticleSystem(
+    [
+        PSYS_PART_FLAGS,
+            PSYS_PART_EMISSIVE_MASK |
+            PSYS_PART_INTERP_COLOR_MASK |
+            PSYS_PART_INTERP_SCALE_MASK |
+            PSYS_PART_FOLLOW_VELOCITY_MASK ,                
+        PSYS_SRC_PATTERN,
+            PSYS_SRC_PATTERN_EXPLODE,
+        
+//                PSYS_SRC_PATTERN_ANGLE_CONE,
+//            PSYS_SRC_ANGLE_BEGIN, 0.0,
+//            PSYS_SRC_ANGLE_END, PI/2,    
+        
+        PSYS_PART_START_COLOR, start_color,
+        PSYS_PART_END_COLOR, end_color,
+        PSYS_SRC_BURST_PART_COUNT, number,
+        PSYS_SRC_BURST_RATE, rate,
+        PSYS_SRC_BURST_RADIUS, radius,
+        PSYS_PART_START_SCALE, <start_size, start_size, start_size>,
+        PSYS_PART_END_SCALE, <end_size, end_size, end_size>,
+        PSYS_PART_START_ALPHA, 1.0,
+        PSYS_PART_END_ALPHA, 0.05,
+        PSYS_PART_MAX_AGE, age,
+        PSYS_SRC_BURST_SPEED_MAX, 0.01,
+        PSYS_SRC_BURST_SPEED_MIN, 0.0,
+        PSYS_SRC_TEXTURE, "bdd55733-13dd-df5b-9128-90c3b13f6570"
+    ]);
+}
+
+particlesoff() {
+    llParticleSystem( [] );
+}
+
+default
+{
+    state_entry()
+    {
+        particlesoff();
+    }
+    
+    link_message(integer sender, integer n, string str, key id)
+    {
+        if (str == "on") {
+            particleson();
+        } else if (str == "off") {
+            particlesoff();
+        }
+    }
+}

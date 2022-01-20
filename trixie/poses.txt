@@ -1,0 +1,179 @@
+///|/|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*
+//|/|*     Nyterave animation ball script!   *
+//|/|*           FREE TO USE V2.1            * 
+//|/|*        by Sitting Lightcloud          *
+//|/|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|/
+// Modified by Tursi
+
+// position to sit on the ball e.g <0.0, 0.0, 0.43>
+vector POSITION=<0.0, 0.0,0.4>;
+
+integer channel = -42;
+
+string animation;
+integer isA = 0;
+integer trixielink = 2;
+integer guestlink = 3;
+
+integer soloshow = 0;       // 0 = DerpyTwi, 1 = Discord, 2 = Trixie (Trixie is kind of obvious though)
+
+vector pos_trixie_0 = <0.03448, -4.16135, 1.52265>;        // Trixie on stage
+rotation rot_trixie_0 = <-0.49999, -0.50001, 0.50001, 0.49999>;
+
+vector pos_trixie_1 = <0.03448, -2.25990, -0.71300>;    // Trixie moved straight behind curtain
+rotation rot_trixie_1=<-0.49999, -0.50001, 0.50001, 0.49999>;
+
+vector pos_guest_0  = <0.03723, 1.50673, -0.74110>;        // Guest behind curtain
+rotation rot_guest_0 = <-0.49999, -0.50001, 0.50001, 0.49999>;
+
+vector pos_guest_1 = <1.19167, 1.50673, -0.74110>;        // Guest hiding underground
+rotation rot_guest_1 = <-0.50000, 0.50000, -0.50000, 0.50000>;
+
+vector pos_in_box =   <0.01057, 2.31413, 1.47809>;        // Appearing in the box
+rotation rot_in_box = <-0.00002, -0.70711, -0.00002, 0.70711>;
+
+vector twi_in_box =  <1.3954, 2.2336, 0.716955>;           // twilight cardboard in box
+
+vector discord_in_box = <1.3954, 2.23359, 1.28802>;         // discord cardboard
+
+//Sets / Updates the sit target moving the avatar on it if necessary.
+UpdateLinkSitTarget(integer link, vector pos, rotation rot)
+{//Using this while the object is moving may give unpredictable results.
+//    llLinkSitTarget(link, pos, rot);//Set the sit target
+    key user = llAvatarOnLinkSitTarget(link);
+    if(user)//true if there is a user seated on the sittarget, if so update their position
+    {
+        vector size = llGetAgentSize(user);
+        if(size)//This tests to make sure the user really exists.
+        {
+            integer linkNum = llGetNumberOfPrims();
+            do
+            {
+                if(user == llGetLinkKey( linkNum ))//just checking to make sure the index is valid.
+                {
+                    //We need to make the position and rotation local to the current prim
+                    list local;
+                    if(llGetLinkKey(link) != llGetLinkKey(1))//only need the local rot if it's not the root.
+                        local = llGetLinkPrimitiveParams(link, [PRIM_POS_LOCAL, PRIM_ROT_LOCAL]);
+                        float fAdjust = ((((0.008906 * size.z) + -0.049831) * size.z) + 0.088967) * size.z;
+                        llSetLinkPrimitiveParamsFast(linkNum, [
+                            PRIM_POS_LOCAL, ((pos + <0.0,0.0,0.4> - (llRot2Up(rot) * fAdjust)) * llList2Rot(local, 1)) + llList2Vector(local, 0),
+                            PRIM_ROT_LOCAL, rot * llList2Rot(local, 1)
+                        ]);
+                    jump end;//cheaper but a tad slower then return
+                }
+            }while( --linkNum );
+        }
+        else
+        {//It is rare that the sit target will bork but it does happen, this can help to fix it.
+            llUnSit(user);
+        }
+    }
+    @end;
+}//Written by Strife Onizuka, size adjustment provided by Talarus Luan
+
+default 
+{
+    state_entry() 
+    {
+        llSitTarget(POSITION, ZERO_ROTATION);
+        llListen(channel, "", NULL_KEY, "");
+        isA = 0;
+        llSetLinkPrimitiveParamsFast(trixielink, [PRIM_POS_LOCAL, pos_trixie_0, PRIM_ROT_LOCAL, rot_trixie_0]);
+        llSetLinkPrimitiveParamsFast(guestlink, [PRIM_POS_LOCAL, pos_guest_0, PRIM_ROT_LOCAL, rot_guest_0]);
+        llSleep(0.2);
+        UpdateLinkSitTarget(trixielink, POSITION, ZERO_ROTATION);
+        UpdateLinkSitTarget(guestlink, POSITION, ZERO_ROTATION);
+        
+    }
+    
+    on_rez(integer r)
+    {
+        llResetScript();
+    }
+    
+    listen(integer channel, string name, key id, string msg) 
+    {
+        if (llGetOwnerKey(id) != llGetOwner()) {
+            return;
+        }
+        
+        if (msg == "posesayt") {
+            llWhisper(-10, "posesok");
+        } else if (msg == "posesdie") {
+            llDie();
+        } else if (msg == "posesswap") {
+            if (llGetObjectPrimCount(llGetKey())+2 == llGetNumberOfPrims()) {
+                // two ponies seated - should be Trixie on 1, and guest on the other
+                // in that case, nothing moves, we just remember it for later
+                isA = 1;
+                llOwnerSay("Doing guest show");
+            } else if (soloshow == 2) {
+                llOwnerSay("Doing Trixie show");
+                
+                // we assume that Trixie is the only seater, and we move her, in two steps,
+                // into the appropriate position. We only have a few seconds, so delays are short
+                isA = 0;
+                llMessageLinked(LINK_ALL_OTHERS, 0, "poseshide", NULL_KEY);
+                llSleep(0.2);
+                llSetLinkPrimitiveParamsFast(trixielink, [PRIM_POS_LOCAL, pos_trixie_1, PRIM_ROT_LOCAL, rot_trixie_1]);
+                llSleep(0.2);
+                UpdateLinkSitTarget(trixielink, POSITION, ZERO_ROTATION);
+                llSleep(0.2);
+                llSetLinkPrimitiveParamsFast(trixielink, [PRIM_POS_LOCAL, pos_guest_1, PRIM_ROT_LOCAL, rot_guest_1]);
+                llSleep(0.2);
+                llMessageLinked(LINK_ALL_OTHERS, 0, "posesunhide", NULL_KEY);
+                UpdateLinkSitTarget(trixielink, POSITION, ZERO_ROTATION);
+            } else if (soloshow == 1) {
+                llOwnerSay("Doing Discord show");
+                // at the last minute, we'll rez the Discord cutout
+            } else if (soloshow == 1) {
+                llOwnerSay("Doing DerpyTwi show");
+                // at the last minute, we'll rez the Twi cutout
+            }
+        } else if (msg == "posesfinal") {
+            integer link = trixielink;
+            if (isA) {
+                link=guestlink;
+            } else if (soloshow != 2) {
+                // derpyTwi or Discord instead of Trixie
+                link = -1;
+            }
+            
+            // the box is responsible for getting the volunteer out of the way, we need to get
+            // the right pony into the box.
+            if (link != -1) {
+                llSetLinkPrimitiveParamsFast(link, [PRIM_POS_LOCAL, pos_in_box, PRIM_ROT_LOCAL, rot_in_box]);
+                llSleep(0.2);
+                UpdateLinkSitTarget(link, POSITION, ZERO_ROTATION);
+                llSleep(0.2);
+            } else {
+                rotation rot = llGetRot();
+                // rotation manually added undoes the rotation added to the pose spheres when they were rezzed
+                if (soloshow == 0) {
+                    llRezAtRoot("derpyTwi", llGetPos() + twi_in_box * llEuler2Rot(<0.0, PI*1.5, 0.0>) * rot, ZERO_VECTOR, llEuler2Rot(<0.0, -1.675, 0.0>) * rot, 99);  // magic value 99 triggers show
+                } else {
+                    llRezAtRoot("Dancing Discord", llGetPos() + discord_in_box * llEuler2Rot(<0.0, PI*1.5, 0.0>) * rot, ZERO_VECTOR, llEuler2Rot(<0.0, -PI/2.0, PI/2.0>) * rot, 99);  // magic value 99 triggers show
+                }                    
+            }
+            llMessageLinked(LINK_ALL_OTHERS, 0, "posesunsit", NULL_KEY);
+            llSleep(1.0);
+            llDie();                            // and go away
+        } else if (msg == "posesdiscord") {
+            soloshow = 1;
+            llOwnerSay("Registered Discord show");
+        } else if (msg == "posestrixie") {
+            soloshow = 2;
+            llOwnerSay("Registered Trixie show");
+        } else if (msg == "posestwilight") {
+            soloshow = 0;
+            llOwnerSay("Registered DerpyTwi show");
+        }
+//        else if (msg == "posesready") {
+//            key user = llAvatarOnLinkSitTarget(trixielink);
+//            if (user == NULL_KEY) {
+//                llOwnerSay("Warning: Trixie is not on her poseball, she needs to be!!");
+//            }
+//        }
+    }
+}

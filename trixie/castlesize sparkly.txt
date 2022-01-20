@@ -1,0 +1,341 @@
+// this version moves one prim at a time the full range
+// Listens for "castleup", "castlereset" and "castleexplode"
+
+vector root_pos;
+integer cnt;
+
+// sparkle particles
+key image = "bdd55733-13dd-df5b-9128-90c3b13f6570";
+
+list primdat = [];
+integer channel = -5;    // -5 by default
+
+default
+{
+    state_entry()
+    {
+        list tmp = llGetLinkPrimitiveParams(1, [PRIM_POSITION]);
+        root_pos=llList2Vector(tmp, 0);
+
+        llOwnerSay("Verifying...");        
+        integer idx;
+        integer max=llGetNumberOfPrims();
+        for (idx=1; idx<=max; idx++) {
+            list tmp1=llGetLinkPrimitiveParams(idx, [PRIM_DESC]);
+            string str=llList2String(tmp1,0);
+            primdat+=str;
+            list tmp=llParseString2List(str, [";"], []);
+            if (llList2Integer(tmp, 0) != idx) {
+                llOwnerSay("Prim " + (string)idx + " no match on index for string: " + str);
+                state broken; 
+            }
+        } 
+    
+        state shrunk;
+    }
+}
+
+state grow
+{
+    state_entry()
+    {
+        llOwnerSay("Grow");
+        cnt = 0;
+        llSetTimerEvent(0.25);
+    }
+    
+    timer()
+    {
+        cnt++;
+        if (cnt > llGetNumberOfPrims()) {
+            // we're done
+            llSetLinkPrimitiveParamsFast(cnt-1, [PRIM_GLOW, ALL_SIDES, 0.1]);
+            llSetTimerEvent(0.0);
+            state full;
+        } else {
+            string str = llList2String(primdat,cnt-1);
+            list tmp=llParseString2List(str, [";"], []);
+            vector position=(vector)llList2String(tmp, 1);
+            vector size=(vector)llList2String(tmp, 2);
+            if (cnt == 1) {
+                position = root_pos;
+            }
+            llSetLinkAlpha(cnt, 1.0, ALL_SIDES);
+            if (cnt == 1) {
+                llSetLinkPrimitiveParamsFast(cnt, [PRIM_SIZE, size, PRIM_GLOW, ALL_SIDES, 0.1]);
+            } else {
+                llSetLinkPrimitiveParamsFast(cnt-1, [PRIM_GLOW, ALL_SIDES, 0.1]);
+                llLinkParticleSystem(cnt-1, []);
+                llSetLinkPrimitiveParamsFast(cnt, [PRIM_POS_LOCAL, position, PRIM_SIZE, size, PRIM_GLOW, ALL_SIDES, 1.0]);
+            }                
+            if (cnt < llGetNumberOfPrims()) {
+                str = llList2String(primdat,cnt-1);
+                tmp=llParseString2List(str, [";"], []);
+                size=(vector)llList2String(tmp, 2);
+                // turn size into a scaling factor, roughly
+                float sizefactor=(size.x+size.y+size.z)/3;      // average
+                
+                llLinkParticleSystem(cnt+1, [ 
+                    PSYS_PART_FLAGS,
+                        PSYS_PART_EMISSIVE_MASK |
+                        PSYS_PART_INTERP_COLOR_MASK |
+                        PSYS_PART_INTERP_SCALE_MASK,
+                    PSYS_SRC_PATTERN,
+                        PSYS_SRC_PATTERN_EXPLODE,
+                    PSYS_PART_START_COLOR, <1, 1, 1>,
+                    PSYS_PART_END_COLOR, <1, 1, 1>,
+                    PSYS_SRC_BURST_PART_COUNT, 20,
+                    PSYS_SRC_BURST_RATE, 0.1,
+                    PSYS_SRC_BURST_RADIUS, 0.3*sizefactor,
+                    PSYS_PART_START_SCALE, <0.5, 0.5, 0.5>*sizefactor,
+                    PSYS_PART_END_SCALE, <0.01, 0.01, 0.01>,
+                    PSYS_PART_START_ALPHA, 1.0,
+                    PSYS_PART_END_ALPHA, 0.5,
+                    PSYS_PART_MAX_AGE, 1.0*(sizefactor*0.8),
+                    PSYS_SRC_BURST_SPEED_MAX, 0.3,
+                    PSYS_SRC_BURST_SPEED_MIN, 0.1,
+                    PSYS_SRC_TEXTURE, image,
+                    PSYS_SRC_ACCEL, <0.0, 0.0, -0.7>
+                ]);
+            }
+        }
+    }
+}        
+
+// pop to full size
+state full
+{
+    state_entry()
+    {
+        llOwnerSay("full");
+        integer idx;
+        integer max=llGetNumberOfPrims();
+        for (idx=1; idx<=max; idx++) {
+            string str = llList2String(primdat,idx-1);
+            list tmp=llParseString2List(str, [";"], []);
+            if (llList2Integer(tmp, 0) != idx) {
+                llOwnerSay("Prim " + (string)idx + " no match on index for string: " + str);
+                state broken; 
+            } else {
+                vector position=(vector)llList2String(tmp, 1);
+                vector size=(vector)llList2String(tmp, 2);
+                if (idx == 1) {
+                    llSetLinkPrimitiveParamsFast(idx, [PRIM_SIZE, size, PRIM_GLOW, ALL_SIDES, 0.1]);
+                    llLinkParticleSystem(idx, []);
+                } else {
+                    llSetLinkPrimitiveParamsFast(idx, [PRIM_POS_LOCAL, position, PRIM_SIZE, size, PRIM_GLOW, ALL_SIDES, 0.1]);
+                    llLinkParticleSystem(idx, []);
+                }
+            }
+        } 
+        llListen(channel, "", NULL_KEY, "");     
+    }
+
+    listen(integer ch, string name, key id, string msg) {
+        // expecting commands only from our trailer!
+        if (llGetOwner() != llGetOwnerKey(id)) {
+            llOwnerSay("Got undesired command from " + llKey2Name(id));
+        } else {
+            if (msg == "castleup") {
+                llOwnerSay("Got command 'castleup' in full state.");
+            } else if (msg == "castleexplode") {
+                state explode;
+            } else if (msg == "castlereset") {
+                llResetScript();
+            } else if (msg == "castleayt") {
+                llWhisper(-10, "castleok");
+                state shrunk;
+            } else {
+                llOwnerSay("Got unknown command: " + (string)msg + " from " + llKey2Name(id));
+            }
+        }
+    }
+}
+
+// pop the castle up into place transparently, then slip it down in
+// hopes of working around an SL caching bug that makes pieces pop
+// into place instead of sliding into place, but only the first time.
+state castleprep
+{
+    state_entry()
+    {
+        llOwnerSay("castleprep");
+        integer idx;
+        integer max=llGetNumberOfPrims();
+        for (idx=1; idx<=max; idx++) {
+            string str = llList2String(primdat,idx-1);
+            list tmp=llParseString2List(str, [";"], []);
+            if (llList2Integer(tmp, 0) != idx) {
+                llOwnerSay("Prim " + (string)idx + " no match on index for string: " + str);
+                state broken; 
+            } else {
+                vector position=(vector)llList2String(tmp, 1);
+                vector size=(vector)llList2String(tmp, 2);
+                if (idx != 1) {
+                    llSetLinkPrimitiveParamsFast(idx, [PRIM_POS_LOCAL, position]);
+                }
+            }
+        }
+        
+        // back to waiting state
+        state shrunk;
+    }
+}    
+
+state broken
+{
+    state_entry()
+    {
+        llOwnerSay("Aborted due to error. Script reset required.");
+    }
+}
+
+state hold
+{
+    // post-show, hold 30s, unless reset
+    state_entry()
+    {
+        llListen(channel, "", NULL_KEY, "");
+        llSetTimerEvent(30.0);    
+    }
+
+    listen(integer ch, string name, key id, string msg) {
+        // expecting commands only from our trailer!
+        if (llGetOwner() != llGetOwnerKey(id)) {
+            llOwnerSay("Got undesired command from " + llKey2Name(id));
+        } else {
+            if (msg == "castleup") {
+                llOwnerSay("Got command 'castleup' in bad state hold");
+            } else if (msg == "castleexplode") {
+                llOwnerSay("Got command 'castleexplode' in bad state hold");
+            } else if (msg == "castlereset") {
+                llResetScript();
+            } else if (msg == "castleayt") {
+                llWhisper(-10, "castleok");
+                state shrunk;       // get ready
+            } else if (msg == "castledie") {
+                llDie();
+            } else {
+                llOwnerSay("Got unknown command: " + (string)msg + " from " + llKey2Name(id));
+            }
+        }
+    } 
+    
+     timer()
+     {
+         llSetTimerEvent(0.0);
+         // zap everything out of the way
+         state shrunk;
+    } 
+}
+
+// this state's job is to make a fully grown castle shrink in place
+// it assumes that the castle is grown.
+// We use this after the explosion to minimize the invisible prims,
+// and then later we push them back underground. But we don't move
+// them now because people's cameras are probably still focused on them.
+state shrink
+{
+    state_entry()
+    {
+        llOwnerSay("Shrink");
+        cnt = llGetNumberOfPrims()+1;
+        while (cnt > 0) {
+            if (cnt == 1) {
+                llSetLinkPrimitiveParamsFast(cnt, [PRIM_SIZE, <0.1,0.1,0.1>, PRIM_GLOW, ALL_SIDES, 0.0]);
+            } else {
+                llSetLinkPrimitiveParamsFast(cnt, [PRIM_SIZE, <0.1,0.1,0.1>, PRIM_GLOW, ALL_SIDES, 0.0]);
+            }
+            cnt--;                
+        }
+        // we're done
+        state hold;
+    }
+}        
+ 
+// holding state for smallest - set all prims to minimum and invisible
+state shrunk
+{
+    state_entry() 
+    {
+        llOwnerSay("Shrunk.");
+        integer idx;
+        integer max=llGetNumberOfPrims();
+        llSetLinkPrimitiveParamsFast(1, [PRIM_SIZE, <0.01,0.01,0.01>  ]);
+        llLinkParticleSystem(1,[]);
+        llSetLinkAlpha(1, 0.0, ALL_SIDES);
+        for (idx=2; idx<=max; idx++) {
+            llLinkParticleSystem(idx,[]);
+            llSetLinkPrimitiveParamsFast(idx, [PRIM_POS_LOCAL, <0,0,0>, PRIM_SIZE, <.1,.1,.1>, PRIM_GLOW, ALL_SIDES, 0.0 ]);
+            llSetLinkAlpha(idx, 0.0, ALL_SIDES);
+        }
+        llListen(channel, "", NULL_KEY, "");     
+    }
+    
+
+    listen(integer ch, string name, key id, string msg) {
+        // expecting commands only from our trailer!
+        if (llGetOwner() != llGetOwnerKey(id)) {
+            llOwnerSay("Got undesired command from " + llKey2Name(id));
+        } else {
+            if (msg == "castleup") {
+                state grow;
+            } else if (msg == "castleexplode") {
+                llOwnerSay("Got command 'castleexplode' in bad state shrunk");
+            } else if (msg == "castlereset") {
+                llResetScript();
+            } else if (msg == "castleayt") {
+                llWhisper(-10, "castleok");
+                state castleprep;
+            } else if (msg == "castledie") {
+                llDie();
+            } else {
+                llOwnerSay("Got unknown command: " + (string)msg + " from " + llKey2Name(id));
+            }
+        }
+    }  
+    
+}
+
+state explode
+{
+    state_entry()
+    {
+        integer idx;
+        
+        // we need to very quickly flash bright, throw particles everywhere, and zoom the castle itself out of sight
+        // Trixie will need to respond to the same command to quickly change, grow wings, and start to glide down, but
+        // that's another script. ;)
+        // we can try three loops, but, I think it will be too slow...
+        integer max=llGetNumberOfPrims();
+        for (idx=1; idx<=max; idx++) {
+            llLinkParticleSystem(idx, [
+                PSYS_PART_FLAGS,    PSYS_PART_EMISSIVE_MASK |
+                                    PSYS_PART_INTERP_COLOR_MASK |
+                                    PSYS_PART_INTERP_SCALE_MASK,
+                PSYS_SRC_PATTERN,   PSYS_SRC_PATTERN_EXPLODE,
+                PSYS_SRC_BURST_RADIUS,  1.0,
+                PSYS_PART_START_COLOR,  <.88, .88, 1.0>,
+                PSYS_PART_END_COLOR,    <.5, .5, .5>,
+                PSYS_PART_START_ALPHA,  1.0,
+                PSYS_PART_END_ALPHA,    0.2,
+                PSYS_PART_START_SCALE,  <0.8, 0.8, 0.8>,
+                PSYS_PART_END_SCALE,    <0.2, 0.2, 0.2>,
+                PSYS_PART_START_GLOW,   0.2,
+                PSYS_PART_END_GLOW,     0.01,
+                PSYS_SRC_MAX_AGE,       0.5,
+                PSYS_PART_MAX_AGE,      5.0,
+                PSYS_SRC_BURST_RATE,    0.5,
+                PSYS_SRC_BURST_PART_COUNT, 50,
+                PSYS_SRC_BURST_SPEED_MIN,  1.0,
+                PSYS_SRC_BURST_SPEED_MAX,  3.0
+                ]);
+            llSetLinkAlpha(idx, 0.0, ALL_SIDES);
+            // particle system should self-expire
+        }
+        state shrink;
+    }
+}
+        
+    
+    

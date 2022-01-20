@@ -1,0 +1,389 @@
+// the mechanisms are subject to change, but this gives me a simple central reference for the f/x
+
+//link messages (pass time in seconds as the integer - if 0 (or >60) a default is used)
+// "fire" - flames on stage (once, 2 seconds - more than 2.0 will loop?)
+// "sparks" - spark sprays on stage (4 seconds)
+// "wheel" - wheel and rocket above stage (6 seconds)
+
+integer testmode = 0;
+integer rezcastletry = 0;
+
+default
+{
+    state_entry()
+    {
+        // tip handler
+        llSetPayPrice(50, [25,100,500,1000]);
+        llListen(5, "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        id = llGetOwnerKey(id);
+        if (id != llGetOwner()) {
+            return;
+        }
+
+        if (channel == 5) {
+            if (msg == "showstart") {
+                // better be on the poseball, but this will stage up the show opening!
+                
+                // first, stage the pony
+                llMessageLinked(LINK_ROOT, 0, "staging", NULL_KEY);
+                
+                // and fix her expression for a grin
+                llWhisper(88, "eyes|2763194d-d6d6-f0a8-1b67-96559e81e6c5");
+                llWhisper(88, "mouth|20ca2cd3-6a25-60c1-73bd-095d5742eb3c");
+                
+                // brief delay (mostly for recording setup)
+                llSleep(3.0);
+                
+                // and open the stage (takes < 2s)
+                llMessageLinked(LINK_ROOT, 0, "unfold", NULL_KEY);
+                llSleep(2.0);
+
+                // bring up the tip notice
+                llMessageLinked(LINK_ROOT, 1, "tiptext", NULL_KEY);
+                
+                // Delay long enough for the message to /almost/ finish, we want to appear near the end
+                llSleep(5.0);
+                
+                // sparks!
+                llMessageLinked(LINK_ALL_OTHERS, 0, "sparks", NULL_KEY);
+    
+                // briefer pause
+                llSleep(0.5);
+                
+                // Start the smoke
+                llMessageLinked(LINK_ALL_OTHERS, 0, "smoke", NULL_KEY);
+                
+                // briefer pause
+                llSleep(0.3);
+                
+                // get out there and pose
+                llMessageLinked(LINK_ROOT, 0, "start", NULL_KEY);
+                
+                // and clear the tip text till near the end of the show
+                llMessageLinked(LINK_ROOT, 0, "tiptext", NULL_KEY);
+                
+            } else if (msg == "showend") {
+                // Trixie needs to be on the poseball already
+                llMessageLinked(LINK_ALL_OTHERS, 0, "smoke", NULL_KEY);
+
+                // brief pause
+                llSleep(0.7);
+
+                // and hide Trixie underground
+                llMessageLinked(LINK_ROOT, 0, "staging", NULL_KEY);
+                
+            } else if (msg == "prepare") {
+                // remove the cards in case they are up
+                llMessageLinked(LINK_SET, 0, "cards", id);
+                // make sure we can communicate with needed parts, and if we can't,
+                // then rez them and try again!
+                llOwnerSay("Testing for show elements...");
+                llListen(-10, "", NULL_KEY, "");
+                testmode = 0;
+                // ask the castle if it's there
+                llWhisper(-5, "castleayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "cleanup") {
+                // delete any rezzed objects!
+                llOwnerSay("Requesting cleanup...");
+                llWhisper(-5, "castledie");
+                llWhisper(-15, "fireworksdie");
+                llWhisper(-22, "angeldie");
+                llWhisper(-35, "sawsdie");
+                llWhisper(-36, "boxdie");
+                llWhisper(-37, "signdie");
+                llWhisper(-42, "posesdie");
+                llWhisper(-123, "sundie");
+                llWhisper(-123, "moondie");
+                // and fold the trailer back up
+                llMessageLinked(LINK_SET, 0, "fold", id);
+                // and remove the cards in case they are up
+                llMessageLinked(LINK_SET, 0, "cards", id);
+            } else if (llGetSubString(msg, 0, 5) == "castle") {
+                // castle is on -5
+                llWhisper(-5, msg);
+            } else if (llGetSubString(msg, 0, 3) == "cape") {
+                // costumes are on -7
+                llWhisper(-7, msg);
+            } else if (llGetSubString(msg, 0, 8) == "fireworks") {
+                // fireworks are on -15
+                llWhisper(-15, msg);
+            } else if (llGetSubString(msg, 0, 4) == "angel") {
+                llWhisper(-22, msg);
+            } else if (llGetSubString(msg, 0, 3) == "saws") {
+                llWhisper(-35, msg);
+            } else if (llGetSubString(msg, 0, 2) == "box") {
+                llWhisper(-36, msg);
+            } else if (llGetSubString(msg, 0, 4) == "poses") {
+                llWhisper(-42, msg);
+            } else if (llGetSubString(msg, 0, 2) == "sun") {
+                llWhisper(-123, msg);
+            } else if (llGetSubString(msg, 0, 3) == "moon") {
+                llWhisper(-123, msg);
+            } else if (llGetSubString(msg, 0, 3) == "horn") {
+                llWhisper(-175, msg);
+            } else if (msg == "circleup") {
+                // circle commands need arguments
+                llMessageLinked(LINK_SET, 1, "circles", id);
+            } else if (msg == "circledown") {
+                // circle commands need arguments
+                llMessageLinked(LINK_SET, 0, "circles", id);
+            } else if (msg == "cards1") {
+                // card commands need arguments
+                llMessageLinked(LINK_SET, 1, "cards", id);
+            } else if (msg == "cards2") {
+                // card commands need arguments
+                llMessageLinked(LINK_SET, 2, "cards", id);
+            } else if (msg == "cardsoff") {
+                // card commands need arguments
+                llMessageLinked(LINK_SET, 0, "cards", id);
+            } else if (msg == "tiptexton") {
+                // tiptext also needs arguments
+                llMessageLinked(LINK_SET, 1, "tiptext", id);
+            } else if (msg == "tiptextoff") {
+                // tiptext also needs arguments
+                llMessageLinked(LINK_SET, 0, "tiptext", id);
+            } else {
+                // just relay to link message for now, if we don't know it (good for testing)
+                llMessageLinked(LINK_SET, 0, msg, id); 
+            }
+        } else if (channel == -10) {
+            // show testing channel
+            if (msg == "castleok") {
+                llOwnerSay("Castle checked in.");
+                testmode = 2;  // ask for star cape
+                llWhisper(-7, "capestarayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "capestarok") {
+                llOwnerSay("Star cape checked in.");
+                testmode = 3;   // ask for ice cape
+                llWhisper(-7, "capeiceayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "capeiceok") {
+                llOwnerSay("Ice cape checked in");
+                testmode = 4;
+                llWhisper(-12, "wingsayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "wingsok") {
+                llOwnerSay("Wings checked in");
+                testmode = 5;   // ask for tux
+                llWhisper(-7, "capetuxayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "capetuxok") {
+                llOwnerSay("Tux checked in");
+                testmode = 6;   // ask for fireworks
+                llWhisper(-15, "fireworksayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "fireworksok") {
+                llOwnerSay("Fireworks checked in");
+                testmode = 8;   // ask for Angel
+                llWhisper(-22, "angelayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "angelok") {
+                llOwnerSay("Angel checked in");
+                testmode = 10;  // ask for saws
+                llWhisper(-35, "sawsayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "sawsok") {
+                llOwnerSay("Saws checked in");
+                testmode = 12;  // ask for box
+                llWhisper(-36, "boxayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "boxok") {
+                llOwnerSay("Box checked in");
+                testmode = 14;  // ask for sign
+                llWhisper(-37, "signayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "signok") {
+                llOwnerSay("Sign checked in");
+                testmode = 16;  // ask for poses
+                llWhisper(-42, "posesayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "posesok") {
+                llOwnerSay("Poses checked in");
+                testmode = 18;  // ask for sun
+                llWhisper(-123, "sunayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "sunok") {
+                llOwnerSay("Sun checked in");
+                testmode = 20;  // ask for moon
+                llWhisper(-123, "moonayt");
+                llSetTimerEvent(1.0);
+            } else if (msg == "moonok") {
+                llOwnerSay("Moon checked in");
+                
+                llOwnerSay("Show Ready!");
+                testmode = 99;  // done
+                llSetTimerEvent(0.0);
+            }
+        }
+    }
+    
+    timer() {
+        if (testmode == 0) {
+            llOwnerSay("Castle timed out, rezzing");
+            rotation rot = llGetRot();
+            // this rotation is technically wrong! But it works (?) so I'm not going to frig with it.
+            llRezAtRoot("Trixie's Frozen Castle", llGetPos()+<-2.04617,-0.06544,-1.03>*rot, ZERO_VECTOR, rot*llEuler2Rot(<0.0,0.0,PI>), 0);
+            llSleep(2.0);       // brief delay to hopefully let it rez
+            testmode = 1;
+            llWhisper(-5, "castleayt");
+            llSetTimerEvent(1.0);
+        } else if (testmode == 1) {
+            llOwnerSay("Castle timed out again, quitting.");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        } else if (testmode == 2) {
+            llOwnerSay("Star cape timed out, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        } else if (testmode == 3) {
+            llOwnerSay("Ice cape timed out, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        } else if (testmode == 4) {
+            llOwnerSay("Wings timed out, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        } else if (testmode == 5) {
+            llOwnerSay("Tux timed out, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        } else if (testmode == 6) {
+            llOwnerSay("Fireworks timed out, rezzing");
+            rotation rot = llGetRot();
+            llRezAtRoot("FireworksSet", llGetPos()+<-3.00894, 0.00247, 1.22577>*rot, ZERO_VECTOR, rot, 0);
+            llSleep(2.0);       // brief delay to hopefully let it rez
+            testmode = 7;
+            llWhisper(-15, "fireworksayt");
+            llSetTimerEvent(1.0);
+        } else if (testmode == 7) {
+            llOwnerSay("Fireworks timed out again, quitting.");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        } else if (testmode == 8) {
+            llOwnerSay("Angel timed out, rezzing");
+            rotation rot = llGetRot();
+            llRezAtRoot("AngelT", llGetPos()+<0.64481, -1.70464, 0.23163>*rot, ZERO_VECTOR, llEuler2Rot(<PI,0.0,PI>)*rot, 0);
+            llSleep(2.0);       // brief delay to hopefully let it rez
+            testmode = 9;
+            llWhisper(-22, "angelayt");
+            llSetTimerEvent(1.0);
+        } else if (testmode == 9) {
+            llOwnerSay("Angel timed out again, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        } else if (testmode == 10) {
+            llOwnerSay("Saws timed out, rezzing");
+            rotation rot = llGetRot();
+            llRezAtRoot("Saws", llGetPos()+<2.00597, 0.61727, 7.91354>*rot, ZERO_VECTOR, llEuler2Rot(<0.0,-PI/2.0,0.0>)*rot, 0);
+            llSleep(2.0);       // brief delay to hopefully let it rez
+            testmode = 11;
+            llWhisper(-35, "sawsayt");
+            llSetTimerEvent(1.0);
+        } else if (testmode == 11) {
+            llOwnerSay("Saws timed out again, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        }  else if (testmode == 12) {
+            llOwnerSay("Box timed out, rezzing");
+            rotation rot = llGetRot();
+            llRezAtRoot("Scary Crate", llGetPos()+<2.00798,-2.08001,5.13278>*rot, ZERO_VECTOR, rot, 0);
+            llSleep(2.0);       // brief delay to hopefully let it rez
+            testmode = 13;
+            llWhisper(-36, "boxayt");
+            llSetTimerEvent(1.0);
+        } else if (testmode == 13) {
+            llOwnerSay("Box timed out again, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        }  else if (testmode == 14) {
+            llOwnerSay("Sign timed out, rezzing");
+            rotation rot = llGetRot();
+            llRezAtRoot("TrixieSign", llGetPos()+<3.00847, 2.59473, -0.39255>*rot, ZERO_VECTOR, rot, 0);
+            llSleep(2.0);       // brief delay to hopefully let it rez
+            testmode = 15;
+            llWhisper(-37, "signayt");
+            llSetTimerEvent(1.0);
+        } else if (testmode == 15) {
+            llOwnerSay("Sign timed out again, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        }  else if (testmode == 16) {
+            llOwnerSay("Poses timed out, rezzing");
+            rotation rot = llGetRot();
+            llRezAtRoot("Poses", llGetPos()+<0.51193, 0.52132, 0.01613>*rot, ZERO_VECTOR, llEuler2Rot(<0.0, PI/2, 0.0>)*rot, 0);
+            llSleep(2.0);       // brief delay to hopefully let it rez
+            testmode = 17;
+            llWhisper(-42, "posesayt");
+            llSetTimerEvent(1.0);
+        } else if (testmode == 17) {
+            llOwnerSay("Poses timed out again, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        } else if (testmode == 18) {
+            llOwnerSay("Sun timed out, rezzing");
+            rotation rot = llGetRot();
+            llRezAtRoot("Solar Eclipse", llGetPos()+<-3.05685, -0.06271, 0.54656>*rot, ZERO_VECTOR, llEuler2Rot(<0.0, PI/2, 0.0>)*rot, 0);
+            llSleep(2.0);       // brief delay to hopefully let it rez
+            testmode = 19;
+            llWhisper(-123, "sunayt");
+            llSetTimerEvent(1.0);
+        } else if (testmode == 19) {
+            llOwnerSay("Sun timed out again, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        } else if (testmode == 20) {
+            llOwnerSay("Moon timed out, rezzing");
+            rotation rot = llGetRot();
+            llRezAtRoot("Moonrise", llGetPos()+<-2.94573, -0.06271, 0.54656>*rot, ZERO_VECTOR, llEuler2Rot(<0.0, PI/2, 0.0>)*rot, 0);
+            llSleep(2.0);       // brief delay to hopefully let it rez
+            testmode = 21;
+            llWhisper(-123, "moonayt");
+            llSetTimerEvent(1.0);
+        } else if (testmode == 21) {
+            llOwnerSay("Moon timed out again, quitting");
+            testmode = 99;
+            llSetTimerEvent(0.0);
+        }            
+    }
+    
+    money(key id, integer amount)
+    {
+        // handle tips!
+        if (amount > 0) {
+            // ignore attempts to be cute with 0 or less
+            // 1-24 - thank you
+            // 25-99 - picture
+            // 100-499 - spin the wheel
+            // 500-999 - fire the flames
+            // >=1000 - flames, sparks and wheel
+            if (id != llGetOwnerKey(id)) id = llGetOwnerKey(id);
+            integer x = (integer)llFrand(5.0);
+            if (x == 0) llRegionSayTo(id, 0, "The Great and Powerful Trixie thanks you for your donation!");
+            if (x == 1) llRegionSayTo(id, 0, "The Great Trixie can see you are her TRUE fan!");
+            if (x == 2) llRegionSayTo(id, 0, "The Great and Powerful Trixie needs more Great and Powerful fans like you!");
+            if (x == 3) llRegionSayTo(id, 0, "A donation for moi? Truly you know Great and Powerful when you see it!");
+            if (x == 4) llRegionSayTo(id, 0, "The Great and Powerful Trixie is happy to see you enjoy her work!");
+            
+            if (amount>=100) {
+                 llMessageLinked(LINK_SET, 0, "wheel", id);
+            }
+            if (amount>=500) {
+                 llMessageLinked(LINK_SET, 0, "fire", id);
+            }                
+            if (amount>=1000) {
+                llMessageLinked(LINK_SET, 0, "sparks", id);
+            }
+            if (amount >= 25) {
+                llRegionSayTo(id, 0, "Please accept this autographed photo of The Great and Powerful Trixie!");
+                // this needs to be last because it causes a script sleep
+                llGiveInventory(id, "For Trixie's Favorite Fan! (wear me)");
+            }
+        }
+    }
+}

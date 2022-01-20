@@ -1,0 +1,419 @@
+// Trixie Show Script Processor
+// and RP Tool for voice redirect
+// RP Tool code extracted from RP System by Marjan Tomba and Terry Book v1.1+
+
+// 6:05 has the setting for scary box solo show, /5posesdiscord, /5posestwilight, or /5posestrixie
+
+// HACK: channel 6 & 7 are sent as a link message 
+
+list script = [
+"(Scary Box 5000 - /5posesallow firstname.lastname for guest",
+"(MAKE SURE you have the correct GROUP on for scripts!",
+"(prepare stopwatch to start at music cue - make sure all costume elements and HUD are on!",
+
+"/5prepare",
+
+"-- Trixie's audio stream is on http://74.52.6.126:554/trixie if you would like to stream it outside of SL --",
+
+"(Get on Poseball inside stage. Start stopwatch AND hit OK as soon as Trixie starts to talk;/7intro;/6ZHAO_AOOFF",
+"(00:11 - (after 'presenting') - SHOW START!!;/6ZHAO_AOON;/5showstart;%130;/88prim|smile|73a09a3f-ac8a-395f-e5a7-703fbb379f43;/5wheel;/5fire",
+"(00:35 - get out there bowing!;That's right, ponies, The Great and Powerful Trixie is finally back to astound and amaze you all!",
+"(00:40;Trixie will ask for volunteers later, to come on stage with Trixie, like a true fan! Decide now if you will help and be ready!",
+"(00:45;Prepare for an experience never before experienced by pony eyes! It's time to get started!",
+
+"(00:50 - CARD TRICK;Trixie will start simple, a warmup that's a staple of any good magician - the card trick.",
+"(00:55 - First cards;/6LOW_BUTTON;/5cardsmoke;%2;/5cards1;/6OFF_BUTTON",
+"(01:00;You should see a set of cards on Trixie's banner. Trixie commands you to choose one, and keep it a secret!",
+"(01:05;Study that one card, and know it well!",
+"(01:10;Now... Trixie reaches into your mind...",
+"(01:15 - Second cards;/6LOW_BUTTON;/5cardsmoke;%2;/5cards2;/6OFF_BUTTON",
+"(01:20;AND... YOUR CARD IS GONE!!;/7trixie",
+"(01:30 - clear cards - don't wait too long;/6LOW_BUTTON;/5cardsmoke;%2;/5cardsoff;/6OFF_BUTTON",
+
+"(01:35 - BEAST SUMMON;Applause is welcome! But now, Trixie wants to demonstrate a powerful artifact she RE-acquired some moons ago!",
+"(01:40 - Face the audience;/5capegoalicorn",
+"(01:45;That's right, my little ponies! The Alicorn Amulet! The most powerful of all the known artifacts!",
+"(01:50;And now, Trixie will use the power of this amulet to summon a beast most foul to this very stage!",
+"(02:00 - REMOVE HAT!! Face circle area,;/6MED_BUTTON;/5circleup",
+"(02:10 - wait for circle to be fully active;/5angelcue;%10;/5circledown;/6OFF_BUTTON",
+"(02:15;/7trixie",
+"(02:25 - wait a moment for reaction;/5angelstorm",
+"(02:35 - face the audience again;/5capegostars;Humph. Utterly terrifying!",
+
+"(02:45 - optional;It has been a long time since Trixie has put on a show. You are very lucky ponies!",
+"(02:50;Trixie could not deny her fans forever. It's just TOO important to let everypony see her GREATNESS!",
+"(02:55;With that, Trixie has a few treats coming up for a few lucky ponies in the audience....!",
+"(03:00;But remember to show Trixie your love!",
+
+"(03:05 - SCARY BOX 5000;Trixie now wants to present the most dramatic stunt, discovered in another land!",
+"(03:10;Trixie presents the amazing...",
+"(03:15 - box will rez;/6LOW_BUTTON;/5boxshow;%5;/6OFF_BUTTON;...SCARY BOX 5000!!",
+
+"(03:20;Trixie will need a volunteer from the audience... some pony brave. Who will help Trixie?",
+"(04:00 - no particles, no RP tool - ask them to stand in front of the stage. 4:40 is next mandatory step.",
+"(04:10 - choose or skip;Good, good, now, tell Trixie where you are from?",
+"(04:25 - choose or skip;And how are you feeling to be working with the Great and Powerful Trixie?",
+"(04:40 - wait for response, or timeout if too slow;/6LOW_BUTTON;/5boxopen;%3;/6OFF_BUTTON",
+"(04:45;Now, Trixie needs you to hop up onto the poseball for the box.",
+"(05:15;Now, stay there no matter what. Trixie will now lower you into the box...",
+"(05:20 - going to lower and close;/6LOW_BUTTON;/5boxclose;%3;/6OFF_BUTTON",
+"(05:30;Are you comfortable?",
+"(05:45;Good, now just stay very still. Trixie now presents the SCARY part!! Give Trixie a little room here...",
+"(05:55 - hop down off the stage, turn and face saw location;/6LOW_BUTTON;/5sawsshow;%5;/6OFF_BUTTON",
+"(06:05;Nopony spoil the surprise for our friend in the box, now!",
+"(06:20 - move around behind box, and get onto the box poseball;Trixie will just step out of the way now.. excuse Trixie...",
+
+"(06:25;In a world before time, when chaos battled confusion, 10 saws faced one crate in eternal battle! And the great Queen Neighfertiti decreed...",
+"(06:30;Oh, ponyfeathers. Trixie isn't going to tell the whole silly story. Let's just give our friend a push, shall we?",
+"(06:35 - start box sliding;Keep your eyes on the box!;/5boxslide",
+"(06:50 - when the stunt is complete;Another amazing trick by the Great and Powerful Trixie!;/7trixie",
+"(07:00 - after the pose;/6LOW_BUTTON;/5sawshide;%5;/5sawsdie;/6OFF_BUTTON",
+"(07:05 - clear the stage, chat at 7:25, next mandatory at 7:35",
+
+"(07:25 - Chatter, may skip as needed;Trixie hopes nopony from the Vanhoover Lumberyard is in the audience. She'll return the saws later.",
+"(07:30;And now, Trixie would like to tell a story. Would anypony like to hear a story?",
+
+"(07:35 - STORY OF THE ALICORN SISTERS;Trixie is going to tell you the story of the Royal Alicorn Sisters. She is going to need volunteers to play our dear Princesses.",
+"(07:40;First, who would like to play Princess Celestia?;/5prinshow",
+"(08:05;Please come stand on the WHITE pose ball, then 'add' the Celestia costume Trixie will give you..",
+"(08:15;Notice how the ball is not PINK -- Trixie got it right the first time!",
+"(08:30 - when they are almost ready;Your job will be to raise the sun! Can you do it now?",
+"(08:50;Don't worry, Trixie is here to help you do it!",
+"(08:55;Now, Trixie needs somepony to play Princess Luna?",
+"(09:25;Please come up here and stand on the BLUE poseball, then 'add' the Luna costume Trixie will give you.",
+"(09:35 - while waiting;Trixie is even better than M.A.Larson, he only made ONE alicorn princess!;/7rimshot",
+"(09:50 - when nearly ready;Okay, Luna, your job will be to raise the moon! ... and Trixie can tell you'll need some help with that! Just stay there.",
+"(10:00;Finally, Trixie needs to know if there are any fans of Princess Twilight Sparkle?",
+"(10:15 - if nopony is, select this, else skip it;Well, that's okay, Trixie isn't much of a fan, either.",
+"(10:15 - if somepony is, smile and wave;Good, you can smile and wave from the audience, just like Princess Twilight does.",
+"(10:15 - this is grow out of it;Trixie is sorry, but you will probably grow out of it.",
+"(10:20;Is everypony ready?",
+"(10:30 - this version HAS Twilight waving;Good! Now Trixie will tell the story of the Royal Princesses while Twilight Sparkle smiles and waves. Smile and wave, Twilight's fan!",
+"(10:30 - this version has NO Twilight;Good! Now Trixie will tell the story of the Royal Princesses!",
+"(10:35;Once upon a time, in the magical land of Equestria, there were two royal sisters. The eldest used her unicorn powers to bring forth the sun!",
+"(10:36;Princess Celestia, please command the sun to come forward, using your magical voice!",
+"(10:55 - Face Celestia. wait for anything. On OK the sun will raise;/6MED_BUTTON;/5sunraise",
+"(11:10 - when the sun has risen;/6OFF_BUTTON;Unfortunately, the younger sister's beautiful night was often neglected by the ponies she worked so hard to impress. And so she grew resentful, and anger filled her heart until one day, she refused to lower the moon, and decreed...",
+"(11:25 - Face Luna, wait. Skip if she says her line or anything close;Princess Luna, this is your cue, say your line...?",
+"(11:45 - Optional;That's... not quite how Trixie remembers it, but okay.",
+"(11:45 - Optional;She said, 'The Night will last Forever!' So if you would, please!",
+"(12:00 - Wait for Luna to finish, on OK moon will raise;/6MED_BUTTON;/5moonraise",
+"(12:10 - when the moon is finished;/6OFF_BUTTON;Who in the audience thinks that the story should have ended there?",
+"(12:30 - Optional;You ponies are awful! Of course it can't end there!",
+"(12:45;All seemed lost, this terrible rift between the two sisters! Who could possibly help in such a dire situation? Shout it out if you know!",
+"(12:55 - brief pause, face audience;/7trixie;Because yes, the Great and Powerful TRIXIE arrived!",
+"(13:05;Using her AMAZING magic, she separated Sun and Moon..",
+"(13:10 - brief pause;/6MED_BUTTON;/5sunresolve;%50;/6OFF_BUTTON",
+"(13:20 - wait for animation to complete;...and thus allowed the two Sisters to live forever in Harmony!",
+"(13:30 - optional, bow;And THAT is Trixie's story!",
+"(13:45 - when things quiet a bit;Thank you Princess Celestia, and Princess Luna. Please step down, and of course you may keep Trixie's magnificent costumes!",
+"(13:50 - as they step down;/5sunend;/5moonend;/5prinhide",
+
+"(14:00 - note! ice castle at 14:32 sharp;Trixie would like to say that you have all been her favorite audience yet!",
+"(14:05 - optional;Trixie has one more special presentation for you!",
+"(14:10 - Optional money;But if you've enjoyed the show so far, don't forget to tip Trixie, just pay the stage! Tips over 25L earn an autographed picture of Trixie.;/5tiptexton",
+"(14:15 - Optional fun;If you're having fun, Trixie wants to hear it, especially during the finale! MAKE SOME NOISE!",
+
+"(14:32 SHARP -be ready- ICE CASTLE - get ready at center stage facing audience;/5tiptextoff;/6LOW_BUTTON;/7goice;%80;/6OFF_BUTTON",
+"(14:58 - start to face away from audience;/6MED_BUTTON;/7gocastle;%10;/5castleup",
+"(15:30 - trigger when built then immediately sit on the poseball on the balcony;/5smoke;/7endcastle;/6OFF_BUTTON",
+"(15:35 - move to balcony after sparks, if no time to pose (5s) then skip this;/7gocastle;%50;/7endcastle",
+"(16:11 - during last notes of song walk back into castle - 'watch in awe';/5castleexplode;/5capegotux;/88mouth|20ca2cd3-6a25-60c1-73bd-095d5742eb3c",
+"(16:35 - FLY! IMMEDIATELY! Then land on stage and face the audience, start fireworks;/6LOW_BUTTON;/5fireworksstart",
+"(16:45 - stay animated during credits, walk around;/5tiptexton;That's Trixie's show!",
+"(16:50;Trixie would like to thank Marjan Tomba for technical and pyrotechnical assistance!;/6OFF_BUTTON",
+"(16:55;Trixie would also like to thank Wandy and Lady Silvermane for mixing advice and support, and Sheruka for animation support!",
+"(17:00 thank you;/88prim|smile|73a09a3f-ac8a-395f-e5a7-703fbb379f43;Thank you also to Rina-Chan for giving Trixie voice, and to Kiteless Dragon for the introduction voice over!",
+"(17:05;Most of all, Trixie thanks all of you for still being loyal fans after so much time!",
+"(17:10;Trixie hopes to meet each and every one of you at her next show!",
+"(17:22 - get on center poseball. This will end it all after 3 seconds;/5fireworksend;%42;/5showend;/6OFF_BUTTON;%10;/5capegostars;/5tiptextoff;/5fold",
+"(18:00 - when everything calms down, this will reset and kick you off the poseball. SHOULD land in trailer;/5reset"
+];
+
+integer index=0;
+integer channel = -756;
+string pad;
+
+// ---- RP Tool ----
+//main initial variables
+string char_name ; // used for character name
+integer rp_ch = 151;
+
+// RLV variables
+integer rlv_start; // used to flag RLV initialization
+integer rlv_test;
+integer rlv_ch; // for RLV @version check
+integer rlv_handle; //for RLV @version check
+string rlv_viewer; 
+string rlv_version;
+integer rlv_ok = FALSE; // flag for results of @version check
+integer rlv_rez_utime; // used for initial @version check timer
+integer rlv_vers_utime; // used for subsequent @version check timers
+
+//primary initialization
+init()
+{
+    llListen(rp_ch,"",llGetOwner(),"");
+    char_name = llKey2Name(llGetKey());
+}
+
+
+//RLV functions
+rlv_init()
+{
+    rlv_start = TRUE;
+    rlv_ok = FALSE;
+    rlv_viewer = "UNKNOWN";
+    rlv_ch = llRound(llFrand(1000000)) * 999;
+    rlv_handle = llListen(rlv_ch, "", NULL_KEY, "");
+    rlv_vers_utime = llGetUnixTime();
+    llSetTimerEvent(1);
+    llOwnerSay("@version="+(string)rlv_ch);
+}
+rlv_cleanup()
+{
+    llSetTimerEvent(0);
+    llListenRemove(rlv_handle);
+    rlv_start = FALSE;
+}
+rlv_on()
+{
+    if (rlv_version == "") 
+    {
+        llOwnerSay("RLV testing (please wait)");
+        rlv_init();
+    }
+    else if (rlv_version == "UNKNOWN") 
+    {
+        llOwnerSay("Checking for RLV functionality");
+    }
+    else if (rlv_ok == TRUE)
+    {
+        rlv_test = TRUE;
+        llOwnerSay("Enabling automatic redirection (IC = on)");
+        llOwnerSay("@redirchat:"+(string)rp_ch+"=add,rediremote:"+(string)rp_ch+"=add");
+    }
+}
+rlv_off()
+{
+    if (rlv_ok == TRUE)
+    {
+        rlv_test = FALSE;
+        llOwnerSay("Automatic redirection disabled (IC = off)");
+        llOwnerSay("@clear");
+        rlv_cleanup();
+    }
+}
+// ---- RP Tool ----
+
+showbox()
+{
+    // show a message box for the current line of the script
+    string str;
+    
+    str = "";
+    do {
+        str = llList2String(script, index);
+    } while (str ==  "");
+    
+    integer x = llSubStringIndex(str, ";");
+    if (x > 0) {
+        string st = llGetSubString(str, x+1, x+1);
+        if ((st != "/") && (st != "%")) {
+            st = llGetSubString(str, x+1, -1);
+            integer z = llSubStringIndex(st, ";");
+            if (z > 0) {
+                x+=z;
+            } else {
+                x+=llStringLength(st);
+            }
+        }
+    }
+    
+    if (x > 0) {
+        str = llGetSubString(str, 0, x-1);
+    }
+    // make a reasonable length, but always 128 chars to minimize button movement... (does it matter?)
+    str = llGetSubString(str+pad, 0, 127);
+    // now issue the command request (spacing cancel away from the others)
+    llDialog(llGetOwner(), str, [".",".","CANCEL",".",".",".","OK","SKIP","BACK"], channel);
+}
+
+oneline(string str)
+{
+    // parse a single command
+    
+    // supported commands in first char:
+    // ( - text for player, ignore
+    // % - delay in 0.1s increments - sleep
+    // / - communication on non-zero channel
+    // otherwise, just say it on channel zero
+    string c = llGetSubString(str, 0, 0);
+    str = llGetSubString(str, 1, -1);
+    
+    if (c == "(") {
+        // do nothing
+//        llOwnerSay("DEBUG: Ignoring comment: " + c + str);
+    } else if (c == "%") {
+        float n = ((float)str)/10.0;
+//        llOwnerSay("DEBUG: Sleep (" + (string)n + ") : " + c + str);
+        llSleep(n);
+    } else if (c == "/") {
+        integer n = (integer)str;   // get the integer at the beginning, string part ignored
+        string tmp = (string)n;     // guestimate how long it was
+        str = llGetSubString(str, llStringLength(tmp), -1);     // get the rest of the string
+//        llOwnerSay("DEBUG: Whisper (" + (string)n + ") : " + str);
+        // HACK: channels 6 and 7 are sent as link_messages cause the listener is in the same prim
+        // Fix this if you give it to anyone else, add a channel @ or something.
+        if (n == 7) {
+            llMessageLinked(LINK_THIS, 0, str, NULL_KEY);
+        } else if (n == 6) {
+            llMessageLinked(LINK_ALL_OTHERS, 0, str, NULL_KEY);
+        } else {
+            llWhisper(n, str);          // send it out
+        }
+    } else {
+//        llOwnerSay("DEBUG: Say: " + c + str);
+        llSay(0, c+str);
+    }
+}
+
+parseline()
+{
+    // parse the current line of the script by breaking it up and passing it on
+    string str = llList2String(script, index);
+    list x = llParseString2List(str, [";"], []);
+    integer idx;
+    for (idx = 0; idx < llGetListLength(x); idx++) {
+        oneline(llList2String(x, idx));
+    }
+    
+}
+
+default
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        // ---- RP Tool ----
+        init();
+        rlv_init();
+        rlv_off();
+        llOwnerSay("RP Tool ready: " + (string)llGetFreeMemory()+" bytes free");
+        // ---- RP Tool ----
+        
+        integer idx;
+        // make 128 spaces of padding
+        for (idx = 0; idx<32; idx++) {
+            pad = pad + "    ";
+        }
+        llListen(channel, "", llGetOwner(), "");
+        
+        llOwnerSay("Parser has " + (string)llGetFreeMemory() + " bytes free.");
+    }
+
+    touch_start(integer total_number)
+    {
+        index = 0;
+        rlv_on();
+        showbox();
+    }
+    
+    listen(integer ch, string name, key id, string msg)
+    {
+        //llOwnerSay("Got (" + (string)ch + ") " + msg);
+        
+        if (ch == channel) {
+            if (llGetOwnerKey(id) != llGetOwner()) {
+                return;
+            }
+            
+            if (msg == "OK") {
+                parseline();
+            } else if (msg == "SKIP") {
+                // do nothing
+            } else if (msg == "BACK") {
+                if (index > 0) index -= 2;      // 2 because it is incremented below
+            } else if (msg == "CANCEL") {
+                rlv_off();
+                llOwnerSay("** SHOW ABORTED AT LINE " + (string)index + " **");
+                return;
+            } else if (msg == ".") {
+                // slipped on buttons
+                showbox();
+                return;
+            } else {
+                // dunno!
+                llOwnerSay("Unknown command, falling out at line " + (string)index);
+                return;
+            }
+            
+            ++index;
+            if (index < llGetListLength(script)) {
+                showbox();
+            }
+            
+            // showbox might increment index
+            if (index >= llGetListLength(script)) {
+                rlv_off();
+                llOwnerSay("** SHOW IS COMPLETE **");
+            }
+        } else {
+            // ---- RP Tool ----
+            llStringTrim(msg, STRING_TRIM);
+            if (rlv_start == TRUE)
+            {
+                list l=llParseString2List(msg, [" "],[]);
+//                llOwnerSay("heard "+msg);
+                if (llList2String(l,0)+" "+llList2String(l,1) == "RestrainedLife viewer") 
+                {
+                    rlv_version = llList2String(l,2);
+                    rlv_ok = TRUE;
+                    llSetTimerEvent(0);
+                }
+                rlv_cleanup();
+            }
+            if (ch == rp_ch)
+            {
+                llSay(0, msg);
+            }
+            // ---- RP Tool ----
+        }
+    }
+    
+    // ---- RP Tool ----
+    attach(key id)
+    {
+        if (id == NULL_KEY && rlv_ok == TRUE) 
+        {
+            llOwnerSay("Clearing automatic redirection");
+            llOwnerSay("@clear");
+        }
+        else 
+        {
+            rlv_rez_utime = llGetUnixTime();
+            rlv_init();
+            rlv_off();
+        }
+    }
+    timer() // timer for RLV @version check
+    {
+        // wait a minute post rez or 3 seconds after a version request before failing
+        if (rlv_start &&
+            ((llGetUnixTime() - rlv_rez_utime) > 60) && 
+            ((llGetUnixTime() - rlv_vers_utime) > 3)
+        ) {
+            llOwnerSay("RLV Version check FAILED");
+            rlv_version = "";
+            rlv_ok = FALSE;
+            rlv_cleanup();
+        }
+    }
+    // ---- RP Tool ----
+    
+}
+

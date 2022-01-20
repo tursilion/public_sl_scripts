@@ -1,0 +1,109 @@
+///|/|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*
+//|/|*     Nyterave animation ball script!   *
+//|/|*           FREE TO USE V2.1            * 
+//|/|*        by Sitting Lightcloud          *
+//|/|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|*|/
+// Modified by Tursi
+
+// name of the only allowed sitter (if blank, only the owner can sit)
+string legalsit="";
+
+// position to sit on the ball e.g <0.0, 0.0, 0.43>
+vector POSITION=<0.0, 0.0,0.4>;
+
+integer channel = -42;
+
+string animation;
+
+//Sets / Updates the sit target moving the avatar on it if necessary.
+UpdateLinkSitTarget(integer link, vector pos, rotation rot)
+{//Using this while the object is moving may give unpredictable results.
+//    llLinkSitTarget(link, pos, rot);//Set the sit target
+    key user = llAvatarOnLinkSitTarget(link);
+    if(user)//true if there is a user seated on the sittarget, if so update their position
+    {
+        vector size = llGetAgentSize(user);
+        if(size)//This tests to make sure the user really exists.
+        {
+            integer linkNum = llGetNumberOfPrims();
+            do
+            {
+                if(user == llGetLinkKey( linkNum ))//just checking to make sure the index is valid.
+                {
+                    //We need to make the position and rotation local to the current prim
+                    list local;
+                    if(llGetLinkKey(link) != llGetLinkKey(1))//only need the local rot if it's not the root.
+                        local = llGetLinkPrimitiveParams(link, [PRIM_POS_LOCAL, PRIM_ROT_LOCAL]);
+                        float fAdjust = ((((0.008906 * size.z) + -0.049831) * size.z) + 0.088967) * size.z;
+                        llSetLinkPrimitiveParamsFast(linkNum, [
+                            PRIM_POS_LOCAL, ((pos + <0.0,0.0,0.4> - (llRot2Up(rot) * fAdjust)) * llList2Rot(local, 1)) + llList2Vector(local, 0),
+                            PRIM_ROT_LOCAL, rot * llList2Rot(local, 1)
+                        ]);
+                    jump end;//cheaper but a tad slower then return
+                }
+            }while( --linkNum );
+        }
+        else
+        {//It is rare that the sit target will bork but it does happen, this can help to fix it.
+            llUnSit(user);
+        }
+    }
+    @end;
+}//Written by Strife Onizuka, size adjustment provided by Talarus Luan
+
+default 
+{
+    state_entry() 
+    {
+        llSitTarget(POSITION, ZERO_ROTATION);
+    }
+    
+    on_rez(integer r)
+    {
+        llResetScript();
+    }
+    
+    changed(integer change) 
+    { 
+        if (change & CHANGED_LINK) 
+        {
+            key av = llAvatarOnSitTarget();
+               
+            if (av != NULL_KEY) 
+            { 
+                if ((llKey2Name(av) != legalsit) && (av != llGetOwner())) {
+                    llUnSit(av);
+                } else {
+                    llRequestPermissions(av, PERMISSION_TRIGGER_ANIMATION);
+                }
+            }
+            else
+            {
+                integer perm=llGetPermissions();
+                if ((perm & PERMISSION_TRIGGER_ANIMATION) && llStringLength(animation)>0)       
+                llStopAnimation(animation);
+                animation="";
+            }
+        }
+    }
+    run_time_permissions(integer perm)
+    {
+        if (perm & PERMISSION_TRIGGER_ANIMATION)
+        {
+            llStopAnimation("sit");
+            animation="PonyZeroA";
+            llStartAnimation(animation);
+        }
+    }
+
+    link_message(integer sender, integer num, string str, key id)
+    {
+        if (str == "posesunsit") {
+            llUnSit(llAvatarOnSitTarget());
+        } else if (str == "poseshide") {
+            llStartAnimation("downinground");
+        } else if (str == "posesunhide") {
+            llStopAnimation("downinground");
+        }
+    }
+}

@@ -1,0 +1,184 @@
+// which font to use
+string font="trixiefont3";
+// how long between qeb queries - this should be really long.
+float updatedelay = 21600;       // 6 hours
+// set to 1 to echo everything said in the public channel
+integer chatdebug = 0;
+// what color to tint it
+vector textcol = <1.0, 1.0, 1.0>;
+// URL to query
+string url="http://harmlesslion.com/trixieshow.txt";
+
+// working data
+//vector fontratio = < 0.0390625, 0.15625, 0.0 >;     // how much of the font is 1 character
+vector fontratio = < 0.0390625, 0.151, 0.0 >;     // how much of the font is 1 character
+integer xchars = 16;
+integer ychars = 6;
+float xratio = 17.066667;        // number of chars if full texture was used (chars are spaced 30 px apart)
+float yratio = 6.4;
+list faces = [ 3, 7, 4, 6, 1 ];
+list offsets = [ 0.03, 0.0, -0.2421375, 0.0, -0.02902875 ];
+list scales = [ 0.396484375, 1.0, -0.068359375, 1.0, 0.40234375 ];
+
+// vars for prim independence
+integer sign0=-1;
+integer sign1=-1;
+integer sign2=-1;
+integer sign3=-1;
+integer sign4=-1;
+integer sign5=-1;
+integer sign6=-1;
+integer sign7=-1;
+integer sign8=-1;
+list signpieces;
+integer maxpieces = 9;
+
+key http_req;
+
+// remember to match with a single character!
+string FONT = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+// copy the first 5 characters of str to the faces
+// unknown characters will do random things. Use 7-bit ASCII.
+updatetext5(integer link, string str)
+{
+    integer idx;
+    str=str+"     ";    // just make sure it's at least 5 characters long
+    
+    for (idx = 0; idx < 5; idx++) {
+        // get character
+        integer code = llSubStringIndex(FONT, llGetSubString(str, idx, idx));
+        
+        // get texture offset
+        integer tx = code % xchars;
+        integer ty = code / xchars;
+        float xoff = -0.5 + 0.5*fontratio.x + (float)tx / (float)xratio + llList2Float(offsets, idx);
+        float yoff = 0.5 - 0.5/yratio - (float)ty / (float)yratio - 0.005;
+        
+        // calculate sizes
+        vector tmpratio = fontratio;
+        tmpratio.x = tmpratio.x / llList2Float(scales, idx);
+        
+//        llOwnerSay((string)code + " @ (" + (string)xoff + "," + (string)yoff + ") size (" + (string)tmpratio.x + "," + (string)tmpratio.y + ")");
+        
+        llSetLinkPrimitiveParamsFast(link, [
+            PRIM_TEXTURE, llList2Integer(faces, idx), font, tmpratio, <xoff, yoff, 0.0>, 0.0,
+            PRIM_COLOR, llList2Integer(faces, idx), textcol, 1.0
+        ]);
+    }
+}
+
+// string up to however many characters we have defined
+updatetext(string str)
+{
+    integer max = llStringLength(str);
+    integer cnt = 0;
+    integer idx;
+    
+    // autocenter it
+    integer pad = ((maxpieces*5)-max)/2;
+    for (idx = 0; idx<pad; idx++) {
+        str = " " + str;
+    }
+    max = llStringLength(str);    
+    if (max > maxpieces*5) max=maxpieces*5;
+    
+    for (idx = 0; idx<max; idx+=5)
+    {
+        string x = llGetSubString(str, idx, idx+4);
+        integer prim = llList2Integer(signpieces, cnt);
+        cnt++;
+        updatetext5(prim, x);
+    }
+    while (cnt < maxpieces) {
+        integer prim = llList2Integer(signpieces, cnt);
+        cnt++;
+        updatetext5(prim, "");
+    }
+}
+        
+        
+default
+{
+    on_rez(integer x)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        integer cnt = llGetObjectPrimCount(llGetKey());
+        while (cnt > 0) {
+            string tst = llGetLinkName(cnt);
+            if (tst == "sign0") sign0=cnt;
+            if (tst == "sign1") sign1=cnt;
+            if (tst == "sign2") sign2=cnt;
+            if (tst == "sign3") sign3=cnt;
+            if (tst == "sign4") sign4=cnt;
+            if (tst == "sign5") sign5=cnt;
+            if (tst == "sign6") sign6=cnt;
+            if (tst == "sign7") sign7=cnt;
+            if (tst == "sign8") sign8=cnt;
+            cnt--;
+        }
+        signpieces=[sign0, sign1, sign2, sign3, sign4, sign5, sign6, sign7, sign8];
+        integer z= llListFindList(signpieces, [-1]);
+        if (z != -1) {
+            llOwnerSay("Failed to find a prim - list entry " + (string)z);
+            state inactive;
+            return;
+        }
+
+        updatetext("");
+        
+        // Request an update from the server
+        http_req = llHTTPRequest(url, [], ""); 
+        
+        // debug code
+        if (chatdebug) {
+            llListen(0, "", NULL_KEY, "");
+        }
+    }
+
+    link_message(integer sender, integer num, string str, key id)
+    {
+        updatetext(str);
+    }
+    
+    // for debug and test only, not normally activated
+    listen(integer ch, string name, key id, string msg) {
+        float r = ((float)llSubStringIndex(FONT, llGetSubString(name, 0, 0))*2.5)/255.0;
+        float g = ((float)llSubStringIndex(FONT, llGetSubString(name, 1, 1))*2.5)/255.0;
+        float b = ((float)llSubStringIndex(FONT, llGetSubString(name, 2, 2))*2.5)/255.0;
+        textcol = <r,g,b>;
+        updatetext(msg);
+    }        
+    
+    http_response(key id, integer status, list data, string body)
+    {
+        if ((id == http_req) && (status == 200)) {
+            body = llStringTrim(body, STRING_TRIM);
+            updatetext(body);
+            http_req = NULL_KEY;
+        } else if (id == http_req) {
+            llOwnerSay("Trixie's sign got bad response code " + (string)status);
+        }
+        
+        // either way, set up the next query
+        llSetTimerEvent(updatedelay);      // time till we ask again
+    }
+    
+    timer()
+    {
+        http_req = llHTTPRequest(url, [], ""); 
+        llSetTimerEvent(0.0);       // no more firing till an answer comes
+    }
+        
+}
+
+state inactive
+{
+    state_entry()
+    {
+    }
+}

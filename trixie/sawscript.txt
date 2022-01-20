@@ -1,0 +1,71 @@
+integer channel = -35;
+
+stopspin() {
+    llTargetOmega(<0.0,0.0,1.0>, 0.0, 0.0);
+}
+
+startspin() {
+    rotation rot = llGetLocalRot();
+    llTargetOmega(<0.0,0.0,-1.0>*rot, -PI*4, 1.0);
+}
+
+sprayon() {
+    llParticleSystem([
+        PSYS_PART_FLAGS,
+            PSYS_PART_EMISSIVE_MASK|PSYS_PART_INTERP_SCALE_MASK|PSYS_PART_INTERP_COLOR_MASK,
+        PSYS_SRC_PATTERN,
+            PSYS_SRC_PATTERN_ANGLE_CONE,
+        PSYS_SRC_TEXTURE,           
+            "2ca57748-4944-de53-b301-8d0efbafb2c6",
+        PSYS_SRC_BURST_RADIUS,      0.1,
+        PSYS_SRC_ANGLE_BEGIN,       0.0,
+        PSYS_SRC_ANGLE_END,         PI,
+        PSYS_PART_START_COLOR,      <0.56,0.47,0.34>,
+        PSYS_PART_START_SCALE,      <0.51,0.51,0.51>,
+        PSYS_PART_END_SCALE,        <0.51,0.51,0.51>,
+        PSYS_PART_START_ALPHA,      0.8,
+        PSYS_PART_END_ALPHA,        0.8,
+        PSYS_PART_START_GLOW,       0.0,
+        PSYS_SRC_MAX_AGE,           0.0,
+        PSYS_PART_MAX_AGE,          2.0,
+        PSYS_SRC_BURST_RATE,        0.1,
+        PSYS_SRC_BURST_PART_COUNT,  15,
+        PSYS_SRC_ACCEL,             <0.0,0.0,-3.0>,
+        PSYS_SRC_BURST_SPEED_MIN,   1.0,
+        PSYS_SRC_BURST_SPEED_MAX,   1.5
+    ]);
+}
+
+sprayoff() {
+    llParticleSystem([]);
+}
+
+default
+{
+    state_entry()
+    {
+        stopspin();
+        sprayoff();
+        llListen(channel, "", NULL_KEY, "");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        id = llGetOwnerKey(id);
+        if (id != llGetOwner()) {
+            return;
+        }
+        
+        if (msg == "sawson") {
+            startspin();
+        } else if (msg == "sawsoff") {
+            llSleep(2.5);   // sound effect delay
+            stopspin();
+        } else if (msg == "sawssmoke") {
+            sprayon();
+            llSleep(4.0);
+            sprayoff();
+        }
+    }
+}
+

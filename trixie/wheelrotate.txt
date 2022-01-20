@@ -1,0 +1,29 @@
+vector angle=<0.0, 0.0, 0.1>;
+//rotation start=<0.61890, 0.34459, 0.61662, -0.34351>;
+//rotation start=<0.55422, -0.43779, 0.55432, 0.44036>;
+//rotation start=<0.68053, -0.19234, 0.67967, 0.19475>;
+
+// wheel (all four!)
+rotation start=<-0.11321, 0.99357, 0.00000, 0.00000>;
+vector oldpos=<0,0,0>;
+
+default
+{
+    state_entry()
+    {
+        llSetTimerEvent(0.1);
+    }
+
+    timer()
+    {
+        vector t = llGetPos();
+
+        // only if moving
+        if (t != oldpos) {
+            oldpos=t;
+            start *= llEuler2Rot(angle);
+            llSetLinkPrimitiveParamsFast(llGetLinkNumber(), [PRIM_ROT_LOCAL, start]);
+        }
+        
+    }
+}

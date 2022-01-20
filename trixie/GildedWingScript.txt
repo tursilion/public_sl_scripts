@@ -1,0 +1,198 @@
+// This script preinitializes the textures and stuff. This just saved me having to fiddle with 56 textures when I assembled it
+
+integer channel = -12;
+
+// contains a list of left prims in order
+// counts should each reach 28
+// the prim's description field contains 'L' or 'R'
+list primleft;
+list primright;
+integer leftcnt;
+integer rightcnt;
+integer frame;
+integer numframes = 28;
+//string anim="GoldWing";
+string anim="gw";
+vector normalsize = <0.73508, 0.01000, 0.73508>;
+vector smallsize = <0.02390, 0.02390, 0.02390>;     // size of the sparkle prims
+vector newsize = ZERO_VECTOR;
+
+default
+{
+    state_entry()
+    {
+        llMessageLinked(LINK_ALL_OTHERS, 0, "off", NULL_KEY);
+        
+        llOwnerSay("Loading textures...");
+        
+        leftcnt = 0;
+        rightcnt = 0;
+        primleft = [];
+        primright = [];
+        
+        integer idx;
+        for (idx = 1; idx<=llGetNumberOfPrims(); idx++) {
+            list tmp = llGetObjectDetails(llGetLinkKey(idx), [OBJECT_DESC]);
+            if (llList2String(tmp, 0) == "L") {
+                primleft+=idx;
+                ++leftcnt;
+                string name=anim+(string)leftcnt;
+                llSetLinkPrimitiveParamsFast(idx, [ PRIM_TEXTURE, 1, name, <-1.0, 1.0, 0.0>, ZERO_VECTOR, 0.0, 
+                                                    PRIM_TEXTURE, 3, name, < 1.0, 1.0, 0.0>, ZERO_VECTOR, 0.0, 
+                                                    PRIM_COLOR, ALL_SIDES, <1.0, 1.0, 1.0>, 0.0, 
+                                                    PRIM_GLOW, ALL_SIDES, 0.0
+                                                  ]);
+            } else if (llList2String(tmp, 0) == "R") {
+                    primright+=idx;
+                    ++rightcnt;
+                    string name=anim+(string)rightcnt;
+                    llSetLinkPrimitiveParamsFast(idx, [ PRIM_TEXTURE, 1, name, <-1.0, 1.0, 0.0>, ZERO_VECTOR, 0.0, 
+                                                        PRIM_TEXTURE, 3, name, < 1.0, 1.0, 0.0>, ZERO_VECTOR, 0.0, 
+                                                        PRIM_COLOR, ALL_SIDES, <1.0, 1.0, 1.0>, 0.0, 
+                                                        PRIM_GLOW, ALL_SIDES, 0.0
+                                                      ]);
+            } else if (llList2String(tmp, 0) == "fx") {
+                // do nothing, just an fx prim
+            } else {
+                llOwnerSay("Prim " + (string)idx + " has unknown description label " + (string)tmp);
+                idx=999;
+            }         
+        }
+        if (idx < 999) {
+            if (leftcnt != numframes) {
+                llOwnerSay("Got non-" + (string)numframes + " left count of " + (string)leftcnt);
+            } else if (rightcnt != numframes) {
+                llOwnerSay("Got non-" + (string)numframes + " right count of " + (string)rightcnt);
+            } else {
+                state ready;
+            }
+        }
+    }
+}
+
+state ready
+{
+    state_entry()
+    {
+        llMessageLinked(LINK_ALL_OTHERS, 0, "off", NULL_KEY);
+
+        // all frames off
+        integer idx;
+        for (idx = 1; idx<=llGetNumberOfPrims(); idx++) {
+            llSetLinkPrimitiveParamsFast(idx, [ PRIM_COLOR, ALL_SIDES, <1.0, 1.0, 1.0>, 0.0, 
+                                                PRIM_GLOW, ALL_SIDES, 0.0,
+                                                PRIM_SIZE, smallsize
+                                              ]);
+        }
+        
+        llListen(channel, "", NULL_KEY, "");
+        llSetTimerEvent(0.2);       // check flight 5 times a second (and hope for lag to be okay)
+        llOwnerSay("Ready.");
+    }
+    
+    listen(integer channel, string name, key id, string msg) 
+    {
+        id = llGetOwnerKey(id);
+        if (id != llGetOwner()) {
+            return;
+        }
+        
+        if (msg == "wingsayt") {
+            llWhisper(-10, "wingsok");
+        }
+    }    
+    
+    timer()
+    {
+        if (llGetAgentInfo(llGetOwner()) & AGENT_FLYING) {
+            state flight;
+        }
+    }
+}
+
+state flight
+{
+    state_entry()
+    {
+        llMessageLinked(LINK_ALL_OTHERS, 0, "on", NULL_KEY);
+
+        // first frame on
+        llSetLinkPrimitiveParamsFast(llList2Integer(primleft, 0), [ PRIM_SIZE, normalsize, 
+                                                                    PRIM_COLOR, 1, <1.0, 1.0, 1.0>, 1.0,
+                                                                    PRIM_COLOR, 3, <1.0, 1.0, 1.0>, 1.0,
+                                                                    PRIM_GLOW, ALL_SIDES, 0.1 ]);
+        llSetLinkPrimitiveParamsFast(llList2Integer(primright, 0),[ PRIM_SIZE, normalsize, 
+                                                                    PRIM_COLOR, 1, <1.0, 1.0, 1.0>, 1.0,
+                                                                    PRIM_COLOR, 3, <1.0, 1.0, 1.0>, 1.0,
+                                                                    PRIM_GLOW, ALL_SIDES, 0.1 ]);
+    
+        newsize = normalsize;
+        llListen(channel, "", NULL_KEY, "");
+        llSetTimerEvent(0.2);   // check 5 times a second for landing
+        llOwnerSay("Flight");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        id = llGetOwnerKey(id);
+        if (id != llGetOwner()) {
+            return;
+        }
+        
+        if (msg == "wingsayt") {
+            llWhisper(-10, "wingsok");
+            // reset ourselves
+            state ready;
+        }
+    }    
+
+    timer()
+    {
+        if (newsize != ZERO_VECTOR) {
+            integer idx;
+            // resize the rest of the hidden frames
+            for (idx = 1; idx<llGetListLength(primleft); idx++) {
+                llSetLinkPrimitiveParamsFast(llList2Integer(primleft, idx), [ PRIM_SIZE, normalsize ]);
+                llSetLinkPrimitiveParamsFast(llList2Integer(primright, idx), [ PRIM_SIZE, normalsize ]);
+            }
+            newsize = ZERO_VECTOR;
+        }            
+        
+        if ((llGetAgentInfo(llGetOwner()) & AGENT_FLYING) == 0) {
+            state landed;
+        }
+    }
+}
+
+state landed
+{
+    state_entry()
+    {
+        llMessageLinked(LINK_ALL_OTHERS, 0, "off", NULL_KEY);
+        frame = 0;
+        llOwnerSay("Landed");
+        llSetTimerEvent(0.1);   // wipe wings at 10fps
+    }
+    
+    timer()
+    {
+        // next frame on, or if we're done, all frames off (just go back to ready)
+        ++frame;
+        if (frame >= numframes) {
+            state ready;
+        } else {
+            llSetLinkPrimitiveParamsFast(llList2Integer(primleft, frame), [ PRIM_COLOR, 1, <1.0, 1.0, 1.0>, 1.0,
+                                                                            PRIM_COLOR, 3, <1.0, 1.0, 1.0>, 1.0,
+                                                                            PRIM_GLOW, ALL_SIDES, 0.1 ]);
+            llSetLinkPrimitiveParamsFast(llList2Integer(primright,frame), [ PRIM_COLOR, 1, <1.0, 1.0, 1.0>, 1.0,
+                                                                            PRIM_COLOR, 3, <1.0, 1.0, 1.0>, 1.0,
+                                                                            PRIM_GLOW, ALL_SIDES, 0.1 ]);
+            llSetLinkPrimitiveParamsFast(llList2Integer(primleft, frame-1), [ PRIM_COLOR, 1, <1.0, 1.0, 1.0>, 0.0,
+                                                                              PRIM_COLOR, 3, <1.0, 1.0, 1.0>, 0.0,
+                                                                              PRIM_GLOW, ALL_SIDES, 0.0 ]);
+            llSetLinkPrimitiveParamsFast(llList2Integer(primright,frame-1), [ PRIM_COLOR, 1, <1.0, 1.0, 1.0>, 0.0,
+                                                                              PRIM_COLOR, 3, <1.0, 1.0, 1.0>, 0.0,
+                                                                              PRIM_GLOW, ALL_SIDES, 0.0 ]);
+        }
+    }
+}

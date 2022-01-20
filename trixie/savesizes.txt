@@ -1,0 +1,27 @@
+// This script enumerates all the prims in a linkset, and updates
+// each description to contain the link number (for verification),
+// the position relative to the root prim (so the root is <0,0,0>),
+// and the size. The three fields are semicolon separated.
+
+default
+{
+    state_entry()
+    {
+        integer cnt;
+        integer idx;
+        
+        cnt=llGetNumberOfPrims();
+        
+        for (idx=1; idx<=cnt; idx++) {
+            list data=llGetLinkPrimitiveParams(idx, [PRIM_POS_LOCAL, PRIM_SIZE]);
+            vector position = llList2Vector(data,0);
+            vector size = llList2Vector(data,1);
+            string out = (string)idx+";"+(string)position+";"+(string)size;
+            llSetLinkPrimitiveParams(idx, [PRIM_DESC, out]);
+            llOwnerSay(out);
+        }
+        
+        llOwnerSay("Done " + (string)cnt + " prims. \"idx;<pos>;<size>\"");
+        llOwnerSay("Position is relative to root prim.");
+    }
+}

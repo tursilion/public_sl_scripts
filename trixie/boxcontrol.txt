@@ -1,0 +1,425 @@
+integer channel = -36;
+vector movement= <0.0, 0.0, 5.03608>;
+vector pos;
+
+// prim indexes, autodetected
+integer lid = -1;
+integer pose = -1;
+integer side1 = -1;
+integer side2 = -1;
+integer front = -1;
+integer back = -1;
+
+// movement along stage
+vector crawl;
+vector startpos;
+
+// textures
+string crate001="850d5a9d-20b9-5940-ae4e-e343809dc170";
+string cratefrontfull="ac70935f-53b2-2b24-a442-56fad6adf9db";
+string cratesidefull="0377e91b-501f-b884-1e24-fdef836757f3";
+string cratesidehalf="f7d35fab-e804-f527-e920-9d60522ea623";
+string cratetopfull="1cf76a5e-c4b6-6039-09e2-398db33045aa";
+string cratetophalf="73670dc8-9ebc-aa88-e448-8d978dc56133";
+// texture rotations in radians
+float lidrot = 0.0;
+float side1rot=-1.570796;
+float side2rot=-1.570796;
+float frontrot=4.71238;
+float backrot=4.71238;
+
+// animation stuff
+rotation rot_lid_open = <0.70711, 0.00000, 0.00000, 0.70711>;
+rotation rot_lid_closed = <0.00000, 0.00000, 0.00000, 1.00000>;
+
+rotation rot_front_closed = <0.50001, -0.50001, 0.49999, 0.49999>;
+vector pos_front_closed = <0.02804, 0.82156, 0.81567>;
+rotation rot_back_closed = <0.50001, -0.50001, 0.49999, 0.49999>;
+vector pos_back_closed = <0.02804, -0.81804, 0.81567>;
+rotation rot_side2_closed = <0.00000, -0.70711, 0.00000, 0.70711>;
+vector pos_side2_closed = <-0.64542, 0.00000, 0.81567>;
+rotation rot_side1_closed = <0.00000, -0.70711, 0.00000, 0.70711>;
+vector pos_side1_closed = <0.68230, 0.00000, 0.81567>;
+
+rotation rot_front_open=<0.00000, 0.00000, 0.70711, 0.70711>;
+vector pos_front_open=<0.02804, 1.65056, 0.01214>;
+rotation rot_back_open=<0.70711, -0.70711, 0.00000, 0.00024>;
+vector pos_back_open=<0.02804, -1.63644, 0.00923>;
+rotation rot_side1_open=<-0.00000, -0.00000, -0.00000, 1.00000>;
+vector pos_side1_open=<1.55316, 0.00000, 0.00652>;
+rotation rot_side2_open=<0.00000, -1.00000, 0.00000, 0.00035>;
+vector pos_side2_open=<-1.47999, 0.00000, 0.01132>;
+
+vector pos_pose_up = <0.04804, 0.21506, 1.91812>;
+vector pos_pose_down = <0.04804, 0.21506, 0.06548>;
+rotation rot_pos_down = <-0.00029, -0.00100, 0.70647, 0.70774>;
+rotation rot_pos_present =  <-0.00091, -0.00050, 0.00000, 1.00000>;
+vector pos_pose_audience = <6.69766, 0.21510, 4.61115>;
+vector pos_pose2_place = <-2.16568, -0.19022, -0.15935>;
+
+vector pos_pose_hide        = <-2.16568, -0.19022, -1.04909>;
+rotation rot_pose_hide      = <0.70648, 0.70773, -0.00035, 0.00049>;
+vector pos_pose_audience1   = <9.02409, -0.19022, -1.04909>;
+rotation rot_pose_audience1 = <0.70648, 0.70773, -0.00035, 0.00049>;
+vector pos_pose_audience2   = <9.02409, -0.19022, -0.85457>;
+rotation rot_pose_audience2 = <0.00041, -0.00041, 0.70648, 0.70773>;
+
+
+// debug function, assumes we didn't die and is called from unslide
+repairbox()
+{
+    llSetLinkPrimitiveParamsFast(front, [PRIM_POS_LOCAL, pos_front_closed, PRIM_ROT_LOCAL, rot_front_closed]);
+    llSetLinkPrimitiveParamsFast(back, [PRIM_POS_LOCAL, pos_back_closed, PRIM_ROT_LOCAL, rot_back_closed]);
+    llSetLinkPrimitiveParamsFast(side1, [PRIM_POS_LOCAL, pos_side1_closed, PRIM_ROT_LOCAL, rot_side1_closed]);
+    llSetLinkPrimitiveParamsFast(side2, [PRIM_POS_LOCAL, pos_side2_closed, PRIM_ROT_LOCAL, rot_side2_closed]);
+    llSetLinkPrimitiveParamsFast(pose, [PRIM_POS_LOCAL, pos_pose_down, PRIM_ROT_LOCAL, rot_pos_down]);
+}
+
+doSlide()
+{
+    // slide the box along the stage, vector 'crawl'
+    integer idx;
+    vector newpos = llGetPos();
+    float speed = 0.18;
+    
+    llWhisper(-35, "sawson");
+    for (idx = 0; idx<11; idx++) {
+        newpos+=crawl;
+        //llSetLinkPrimitiveParamsFast(LINK_ROOT, [PRIM_POSITION, newpos]);
+        //llSleep(speed);
+        llSetPos(newpos);
+    }
+
+    llPlaySound("sawcrate", 1.0);
+    llWhisper(-35, "sawssmoke");
+    
+    // request Trixie movement, if needed
+    llWhisper(-42, "posesswap");
+
+    for (idx = 0; idx<10; idx++) {
+        newpos+=crawl;
+        //llSetLinkPrimitiveParamsFast(LINK_ROOT, [PRIM_POSITION, newpos]);
+        //llSleep(speed);
+        llSetPos(newpos);
+    }
+
+    sethalfcut();
+
+    for (idx = 0; idx<10; idx++) {
+        newpos+=crawl;
+        //llSetLinkPrimitiveParamsFast(LINK_ROOT, [PRIM_POSITION, newpos]);
+        //llSleep(speed);
+        llSetPos(newpos);
+    }
+    
+    setfullcut();
+
+    for (idx = 0; idx<10; idx++) {
+        newpos+=crawl;
+        //llSetLinkPrimitiveParamsFast(LINK_ROOT, [PRIM_POSITION, newpos]);
+        //llSleep(speed);
+        llSetPos(newpos);
+    }
+
+    llWhisper(-35, "sawsoff");
+
+    for (idx = 0; idx<5; idx++) {
+        newpos+=crawl;
+        //llSetLinkPrimitiveParamsFast(LINK_ROOT, [PRIM_POSITION, newpos]);
+        //llSleep(speed);
+        llSetPos(newpos);
+    }
+    
+    // pause for anticipation
+    llSleep(1.0);
+    
+    // start the smoke
+    sprayon();
+
+    // let's get the volunteer behind the curtain, underground, and then off to the back
+    llSetLinkPrimitiveParams(pose, [PRIM_POS_LOCAL, pos_pose2_place]);
+    UpdateLinkSitTarget(pose, <0.0, 0.0, 0.1>, ZERO_ROTATION);
+    
+    // and request the swap to occur
+    llWhisper(-42, "posesfinal");
+
+    // brief delay
+    llSleep(0.3);
+    
+    // hide the top, collapse the sides (front, back, side1, side2) and unsit the pony
+    // not using fast on purpose, so we get a delay
+    llSetLinkAlpha(lid, 0.0, ALL_SIDES);
+    llSetLinkPrimitiveParams(front, [PRIM_POS_LOCAL, pos_front_open, PRIM_ROT_LOCAL, rot_front_open]);
+    llSetLinkPrimitiveParams(back, [PRIM_POS_LOCAL, pos_back_open, PRIM_ROT_LOCAL, rot_back_open]);
+
+    // finish dropping walls
+    llSetLinkPrimitiveParams(side1, [PRIM_POS_LOCAL, pos_side1_open, PRIM_ROT_LOCAL, rot_side1_open]);
+    llSetLinkPrimitiveParams(side2, [PRIM_POS_LOCAL, pos_side2_open, PRIM_ROT_LOCAL, rot_side2_open]);
+
+    // turn off the smoke
+    sprayoff();
+    llSleep(0.5);
+
+    // move the original pony back into the audience, and then unseat him and die
+    llSetLinkPrimitiveParams(pose, [PRIM_POS_LOCAL, pos_pose_hide, PRIM_ROT_LOCAL, rot_pose_hide]);
+    llSleep(0.1);
+    UpdateLinkSitTarget(pose, <0.0, 0.0, 0.1>, ZERO_ROTATION);
+    llSleep(0.2);
+    llSetLinkPrimitiveParams(pose, [PRIM_POS_LOCAL, pos_pose_audience1, PRIM_ROT_LOCAL, rot_pose_audience1]);
+    llSleep(0.1);
+    UpdateLinkSitTarget(pose, <0.0, 0.0, 0.1>, ZERO_ROTATION);
+    llSleep(0.2);
+    llSetLinkPrimitiveParams(pose, [PRIM_POS_LOCAL, pos_pose_audience2, PRIM_ROT_LOCAL, rot_pose_audience2]);
+    llSleep(0.1);
+    UpdateLinkSitTarget(pose, <0.0, 0.0, 0.1>, ZERO_ROTATION);
+    llSleep(0.2);
+
+    key user = llAvatarOnLinkSitTarget(pose);
+    if (NULL_KEY != user) llUnSit(user);
+    
+    // and end it all
+    llSleep(0.5);
+    llDie();    
+}
+
+setVisibility(float vis)
+{
+    integer idx;
+    integer max=llGetNumberOfPrims();
+    for (idx=1; idx<=max; idx++) {
+        llSetLinkAlpha(idx, vis, ALL_SIDES);
+    }        
+}
+
+sprayon() {
+    llParticleSystem([
+        PSYS_PART_FLAGS,
+            PSYS_PART_EMISSIVE_MASK|PSYS_PART_INTERP_SCALE_MASK|PSYS_PART_INTERP_COLOR_MASK,
+        PSYS_SRC_PATTERN,
+            PSYS_SRC_PATTERN_ANGLE_CONE,
+        PSYS_SRC_TEXTURE,           
+            "2ca57748-4944-de53-b301-8d0efbafb2c6",
+        PSYS_SRC_BURST_RADIUS,      0.1,
+        PSYS_SRC_ANGLE_BEGIN,       PI/2.0,
+        PSYS_SRC_ANGLE_END,         PI/2.0,
+        PSYS_PART_START_COLOR,      <0.6,0.6,0.6>,
+        PSYS_PART_START_SCALE,      <3.0,3.0,3.0>,
+        PSYS_PART_END_SCALE,        <0.51,0.51,0.51>,
+        PSYS_PART_START_ALPHA,      1.0,
+        PSYS_PART_END_ALPHA,        0.0,
+        PSYS_PART_START_GLOW,       0.0,
+        PSYS_SRC_MAX_AGE,           0.0,
+        PSYS_PART_MAX_AGE,          2.0,
+        PSYS_SRC_BURST_RATE,        0.1,
+        PSYS_SRC_BURST_PART_COUNT,  25,
+        PSYS_SRC_ACCEL,             <0.0,0.0,1.0>,
+        PSYS_SRC_BURST_SPEED_MIN,   1.0,
+        PSYS_SRC_BURST_SPEED_MAX,   1.5
+    ]);
+}
+
+sprayoff() {
+    llParticleSystem([]);
+}
+
+hidepose(float delay) {
+    // move the pose ball into the box and make invisible
+    // delay is the speed per step (so ponies can be lowered in)
+    llSetLinkAlpha(pose, 0.0, ALL_SIDES);
+    if (delay >= 0.2) {
+        // less than 0.2 means instant
+        vector step = (pos_pose_down - pos_pose_up) / 10;
+        vector now = pos_pose_up;
+        integer idx;
+        for (idx = 0; idx < 10; idx++) {
+            now += step;
+            llSetLinkPrimitiveParams(pose, [PRIM_POS_LOCAL, now]);
+            UpdateLinkSitTarget(pose, <0.0, 0.0, 0.1>, ZERO_ROTATION);
+            if (delay > 0.2) {
+                llSleep(delay-0.2);
+            }
+        }
+    }
+    // always end at the correct spot
+    llSetLinkPrimitiveParamsFast(pose, [PRIM_POS_LOCAL, pos_pose_down, PRIM_ROT_LOCAL, rot_pos_down]);      
+}
+
+showpose() {
+    // move the pose ball to the top of the crate and make visible (yes, rotation is 'down')
+     llSetLinkPrimitiveParamsFast(pose, [PRIM_POS_LOCAL, pos_pose_up, PRIM_ROT_LOCAL, rot_pos_down]);      
+     key user = llAvatarOnLinkSitTarget(pose);
+     if (NULL_KEY != user) llUnSit(user);
+     llSetLinkAlpha(pose, 1.0, ALL_SIDES);
+}
+
+closelid() {
+    // close the lid of the box by rotating it
+    llSetLinkPrimitiveParamsFast(lid, [PRIM_ROT_LOCAL, rot_lid_closed]);
+}
+
+openlid() {
+    // open the lid of the box by rotating it
+    llSetLinkPrimitiveParamsFast(lid, [PRIM_ROT_LOCAL, rot_lid_open]);
+}
+
+resettextures() {
+    // lid is special, others are stock
+    llSetLinkPrimitiveParamsFast(lid, [PRIM_TEXTURE, ALL_SIDES, crate001, <1.0, 2.0, 1.0>, <0.0, 0.5, 0.0>, 0.0]);
+    llSetLinkPrimitiveParamsFast(side1, [PRIM_TEXTURE, ALL_SIDES, crate001, <1.0, 1.0, 1.0>, <0.0, 0.0, 0.0>, 3.141592]);
+    llSetLinkPrimitiveParamsFast(side2, [PRIM_TEXTURE, ALL_SIDES, crate001, <1.0, 1.0, 1.0>, <0.0, 0.0, 0.0>, 3.141592]);
+    llSetLinkPrimitiveParamsFast(front, [PRIM_TEXTURE, ALL_SIDES, crate001, <1.0, 1.0, 1.0>, <0.0, 0.0, 0.0>, 0.0]);
+    llSetLinkPrimitiveParamsFast(back, [PRIM_TEXTURE, ALL_SIDES, crate001, <1.0, 1.0, 1.0>, <0.0, 0.0, 0.0>, 0.0]);
+}
+
+sethalfcut() {
+    llSetLinkPrimitiveParamsFast(lid, [PRIM_TEXTURE, ALL_SIDES, cratetophalf, <1.0, 2.0, 1.0>, <0.0, 0.5, 0.0>, lidrot]);
+    llSetLinkPrimitiveParamsFast(side1, [PRIM_TEXTURE, ALL_SIDES, cratesidehalf, <1.0, 1.0, 1.0>, <0.0, 0.0, 0.0>, side1rot]);
+    llSetLinkPrimitiveParamsFast(side2, [PRIM_TEXTURE, ALL_SIDES, cratesidehalf, <1.0, 1.0, 1.0>, <0.0, 0.0, 0.0>, side2rot]);
+    llSetLinkPrimitiveParamsFast(front, [PRIM_TEXTURE, ALL_SIDES, cratefrontfull, <1.0, 1.0, 1.0>, <0.0, 0.0, 0.0>, frontrot]);
+}
+
+setfullcut() {
+    llSetLinkPrimitiveParamsFast(lid, [PRIM_TEXTURE, ALL_SIDES, cratetopfull, <1.0, 2.0, 1.0>, <0.0, 0.5, 0.0>, lidrot]);
+    llSetLinkPrimitiveParamsFast(side1, [PRIM_TEXTURE, ALL_SIDES, cratesidefull, <1.0, 1.0, 1.0>, <0.0, 0.0, 0.0>, side1rot]);
+    llSetLinkPrimitiveParamsFast(side2, [PRIM_TEXTURE, ALL_SIDES, cratesidefull, <1.0, 1.0, 1.0>, <0.0, 0.0, 0.0>, side2rot]);
+    llSetLinkPrimitiveParamsFast(back, [PRIM_TEXTURE, ALL_SIDES, cratefrontfull, <1.0, -1.0, 1.0>, <0.0, 0.0, 0.0>, -backrot]);
+}
+
+//Sets / Updates the sit target moving the avatar on it if necessary.
+UpdateLinkSitTarget(integer link, vector pos, rotation rot)
+{//Using this while the object is moving may give unpredictable results.
+//    llLinkSitTarget(link, pos, rot);//Set the sit target
+    key user = llAvatarOnLinkSitTarget(link);
+    if(user)//true if there is a user seated on the sittarget, if so update their position
+    {
+        vector size = llGetAgentSize(user);
+        if(size)//This tests to make sure the user really exists.
+        {
+            integer linkNum = llGetNumberOfPrims();
+            do
+            {
+                if(user == llGetLinkKey( linkNum ))//just checking to make sure the index is valid.
+                {
+                    //We need to make the position and rotation local to the current prim
+                    list local;
+                    if(llGetLinkKey(link) != llGetLinkKey(1))//only need the local rot if it's not the root.
+                        local = llGetLinkPrimitiveParams(link, [PRIM_POS_LOCAL, PRIM_ROT_LOCAL]);
+                        float fAdjust = ((((0.008906 * size.z) + -0.049831) * size.z) + 0.088967) * size.z;
+                        llSetLinkPrimitiveParamsFast(linkNum, [
+                            PRIM_POS_LOCAL, ((pos + <0.0,0.0,0.4> - (llRot2Up(rot) * fAdjust)) * llList2Rot(local, 1)) + llList2Vector(local, 0),
+                            PRIM_ROT_LOCAL, rot * llList2Rot(local, 1)
+                        ]);
+                    jump end;//cheaper but a tad slower then return
+                }
+            }while( --linkNum );
+        }
+        else
+        {//It is rare that the sit target will bork but it does happen, this can help to fix it.
+            llUnSit(user);
+        }
+    }
+    @end;
+}//Written by Strife Onizuka, size adjustment provided by Talarus Luan
+
+default
+{
+    on_rez(integer z)
+    {
+        llResetScript();
+    }
+    
+    state_entry()
+    {
+        setVisibility(0.0);
+        sprayoff();
+
+        integer cnt = llGetObjectPrimCount(llGetKey());
+        while (cnt > 0) {
+            string tst = llGetLinkName(cnt);
+            if (tst == "lid") lid=cnt;
+            if (tst == "pose") pose=cnt;
+            if (tst == "side1") side1=cnt;
+            if (tst == "side2") side2=cnt;
+            if (tst == "front") front=cnt;
+            if (tst == "back") back=cnt;
+            cnt--;
+        }
+        list x = [lid, pose, side1, side2, front, back];
+        integer z = llListFindList(x, [-1]);
+        if (z != -1) {
+            llOwnerSay("Failed to find a prim - list entry " + (string)z);
+            state inactive;
+            return;
+        }
+        
+        // can't do this until after the inventory
+        hidepose(0.0);
+        closelid();
+
+        // try to work around a bug
+        sethalfcut();
+        llSleep(0.2);
+        setfullcut();
+        llSleep(0.2);
+        repairbox();
+        resettextures();
+        
+        // get movement direction
+        crawl = llRot2Left(llGetRot()) / 10.0;
+        
+        llListen(channel, "", NULL_KEY, "");
+        llOwnerSay("Scary box ready.");
+    }
+
+    listen(integer channel, string name, key id, string msg) 
+    {
+        id = llGetOwnerKey(id);
+        if (id != llGetOwner()) {
+            return;
+        }
+        
+        if (msg == "boxayt") {
+            llWhisper(-10, "boxok");
+        } else if (msg == "boxshow") {
+            pos = llGetPos();
+            pos -= movement;
+            llSetPos(pos);
+            sprayon();
+            llPreloadSound("sawcrate");
+            llSleep(1.0);
+            setVisibility(1.0);
+            sprayoff();
+            startpos=llGetPos();
+        } else if (msg == "boxhide") {
+            pos = llGetPos();
+            pos += movement;
+            llSetPos(pos);
+            setVisibility(0.0);
+            hidepose(0.0);
+        } else if (msg == "boxopen") {
+            openlid();
+            showpose();
+        } else if (msg == "boxclose") {
+            llWhisper(-42, "posesready");   // let the poses know we are starting
+            hidepose(0.3);
+            closelid();
+        } else if (msg == "boxslide") {
+            doSlide();
+        } else if (msg == "boxunslide") {
+            resettextures();
+            repairbox();
+            llSetLinkAlpha(lid, 1.0, ALL_SIDES);
+            llSetPos(startpos);
+        } else if (msg == "boxdie") {
+            llDie();
+        }
+    }
+
+}
+
+state inactive
+{
+    state_entry() {
+    }
+}
+
